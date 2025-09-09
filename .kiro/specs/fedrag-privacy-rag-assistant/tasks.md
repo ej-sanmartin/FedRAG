@@ -58,7 +58,7 @@
   - Set up proper IAM roles and policies for service integration
   - _Requirements: 5.2, 5.3, 5.4, 4.2, 4.3_
 
-- [ ] 8. Implement Terraform Bedrock Guardrails configuration
+- [x] 8. Implement Terraform Bedrock Guardrails configuration
 
   - Create infra/guardrails.tf with aws_bedrock_guardrail resource
   - Configure harm categories with HIGH threshold settings
