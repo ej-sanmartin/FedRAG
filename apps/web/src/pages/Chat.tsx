@@ -1,21 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { chatQuery, handleApiError, type ChatResponse, type Citation } from '../lib/api/client';
-
-// Message types for chat history
-interface Message {
-  id: string;
-  type: 'user' | 'assistant' | 'error';
-  content: string;
-  timestamp: Date;
-  citations?: Citation[];
-  guardrailAction?: 'INTERVENED' | 'NONE';
-  redactedContent?: string;
-}
+import Message, { type Message as MessageType } from '../components/Message';
+import Citations from '../components/Citations';
+import { chatQuery, handleApiError, type ChatResponse } from '../lib/api/client';
 
 const Chat: React.FC = () => {
   // State management
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageType[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
@@ -47,7 +38,7 @@ const Chat: React.FC = () => {
       return;
     }
 
-    const userMessage: Message = {
+    const userMessage: MessageType = {
       id: `user-${Date.now()}`,
       type: 'user',
       content: inputValue.trim(),
@@ -74,7 +65,7 @@ const Chat: React.FC = () => {
       }
 
       // Create assistant message
-      const assistantMessage: Message = {
+      const assistantMessage: MessageType = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
         content: response.answer,
@@ -90,7 +81,7 @@ const Chat: React.FC = () => {
       // Error is handled by creating an error message for the user
       
       // Create error message
-      const errorMessage: Message = {
+      const errorMessage: MessageType = {
         id: `error-${Date.now()}`,
         type: 'error',
         content: handleApiError(err),
@@ -131,59 +122,7 @@ const Chat: React.FC = () => {
     inputRef.current?.focus();
   };
 
-  // Format message content with proper line breaks
-  const formatMessageContent = (content: string) => {
-    return content.split('\n').map((line, index) => (
-      <React.Fragment key={index}>
-        {line}
-        {index < content.split('\n').length - 1 && <br />}
-      </React.Fragment>
-    ));
-  };
 
-  // Render individual message
-  const renderMessage = (message: Message) => {
-    const isUser = message.type === 'user';
-    const isError = message.type === 'error';
-
-    return (
-      <div
-        key={message.id}
-        className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
-      >
-        <div
-          className={`max-w-3xl px-4 py-3 rounded-lg ${
-            isUser
-              ? 'bg-blue-600 text-white'
-              : isError
-              ? 'bg-red-50 text-red-800 border border-red-200'
-              : 'bg-gray-100 text-gray-900'
-          }`}
-        >
-          {/* Guardrail intervention banner */}
-          {message.guardrailAction === 'INTERVENED' && (
-            <div className="mb-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-yellow-800 text-sm">
-              ⚠️ Content filtered by guardrails
-            </div>
-          )}
-          
-          {/* Message content */}
-          <div className="text-sm leading-relaxed">
-            {formatMessageContent(message.content)}
-          </div>
-          
-          {/* Timestamp */}
-          <div
-            className={`text-xs mt-2 ${
-              isUser ? 'text-blue-100' : isError ? 'text-red-600' : 'text-gray-500'
-            }`}
-          >
-            {message.timestamp.toLocaleTimeString()}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <Layout>
@@ -226,7 +165,9 @@ const Chat: React.FC = () => {
                   )}
                   
                   {/* Chat Messages */}
-                  {messages.map(renderMessage)}
+                  {messages.map(message => (
+                    <Message key={message.id} message={message} />
+                  ))}
                   
                   {/* Loading indicator */}
                   {isLoading && (
@@ -287,57 +228,14 @@ const Chat: React.FC = () => {
 
             {/* Citations Panel */}
             <div className="w-80 border-l border-gray-200 bg-gray-50">
-              <div className="p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Citations
-                </h3>
-                {/* Show citations from the most recent assistant message */}
-                {(() => {
+              <Citations 
+                citations={(() => {
                   const lastAssistantMessage = messages
                     .filter(m => m.type === 'assistant')
                     .pop();
-                  
-                  if (lastAssistantMessage?.citations && lastAssistantMessage.citations.length > 0) {
-                    return (
-                      <div className="space-y-4">
-                        {lastAssistantMessage.citations.map((citation, index) => (
-                          <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
-                            <div className="text-sm font-medium text-gray-900 mb-2">
-                              Citation {index + 1}
-                            </div>
-                            {citation.retrievedReferences.map((ref, refIndex) => (
-                              <div key={refIndex} className="mb-3">
-                                {ref.location?.s3Location?.uri && (
-                                  <div className="text-xs text-blue-600 mb-1">
-                                    <a 
-                                      href={ref.location.s3Location.uri}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="hover:underline"
-                                    >
-                                      {ref.location.s3Location.uri.split('/').pop()}
-                                    </a>
-                                  </div>
-                                )}
-                                <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                  {ref.content.text.substring(0, 200)}
-                                  {ref.content.text.length > 200 && '...'}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <p className="text-sm text-gray-500">
-                      Source citations will appear here when you ask questions
-                    </p>
-                  );
-                })()}
-              </div>
+                  return lastAssistantMessage?.citations || [];
+                })()} 
+              />
             </div>
           </div>
         </div>

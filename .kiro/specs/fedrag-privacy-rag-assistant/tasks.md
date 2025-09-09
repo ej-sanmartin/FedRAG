@@ -132,7 +132,7 @@
   - Create message submission and response handling logic
   - _Requirements: 1.1, 6.3, 6.4_
 
-- [ ] 17. Create message and citation display components
+- [x] 17. Create message and citation display components
 
   - Implement apps/web/src/components/Message.tsx for individual messages
   - Add PII redaction toggle functionality for demonstration
