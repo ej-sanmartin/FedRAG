@@ -1,0 +1,34 @@
+# GitHub Environment Configuration for Production
+# This file documents the required environment settings for GitHub Actions
+# Configure these in your GitHub repository settings under Environments
+
+name: production
+
+# Protection rules (configure in GitHub UI)
+protection_rules:
+  required_reviewers: 1
+  prevent_self_review: true
+  dismiss_stale_reviews: true
+  require_code_owner_reviews: true
+
+# Environment variables (configure in GitHub UI)
+variables:
+  ENVIRONMENT: production
+  AWS_REGION: us-east-1
+
+# Secrets required (configure in GitHub UI)
+secrets:
+  # AWS IAM Role for GitHub Actions OIDC
+  AWS_ROLE_ARN: "arn:aws:iam::ACCOUNT-ID:role/GitHubActionsRole"
+  
+  # Terraform variables
+  TF_VAR_PROJECT_NAME: "fedrag"
+  TF_VAR_ENVIRONMENT: "production"
+  TF_VAR_AWS_REGION: "us-east-1"
+  TF_VAR_COGNITO_DOMAIN_PREFIX: "fedrag-prod"
+  TF_VAR_WEB_CALLBACK_URLS: '["https://your-domain.com/callback"]'
+  TF_VAR_WEB_LOGOUT_URLS: '["https://your-domain.com/login"]'
+
+# Deployment branches
+deployment_branches:
+  - main

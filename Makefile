@@ -1,52 +1,183 @@
-.PHONY: install dev build test lint clean package-lambda deploy-infra destroy-infra
+# FedRag Privacy RAG Assistant - Makefile
+# Provides common development and deployment tasks
 
-# Development commands
-install:
+.PHONY: help install clean test lint package-lambda build-web deploy-infra destroy-infra upload-corpus validate-deployment
+
+# Default target
+help: ## Show this help message
+	@echo "FedRag Privacy RAG Assistant - Available Commands:"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+# Development Commands
+install: ## Install all dependencies
+	@echo "Installing dependencies..."
 	pnpm install
 
-dev:
-	pnpm dev
+clean: ## Clean build artifacts and node_modules
+	@echo "Cleaning build artifacts..."
+	rm -rf apps/api/dist apps/api/lambda-deployment.zip
+	rm -rf apps/web/dist
+	rm -rf node_modules apps/*/node_modules
 
-build:
-	pnpm build
+test: ## Run all tests
+	@echo "Running tests..."
+	pnpm run test
 
-test:
-	pnpm test
+lint: ## Run linting on all projects
+	@echo "Running linters..."
+	pnpm run lint
 
-lint:
-	pnpm lint
+# Build Commands
+package-lambda: ## Package Lambda function for deployment
+	@echo "Packaging Lambda function..."
+	cd apps/api && pnpm run build
+	cd apps/api && pnpm run package
+	@echo "Lambda package created: apps/api/lambda-deployment.zip"
 
-type-check:
-	pnpm type-check
+build-web: ## Build web application for production
+	@echo "Building web application..."
+	cd apps/web && pnpm run build
+	@echo "Web build completed: apps/web/dist"
 
-clean:
-	rm -rf node_modules apps/*/node_modules apps/*/dist infra/.terraform
+# Infrastructure Commands
+deploy-infra: ## Deploy infrastructure using Terraform
+	@echo "Deploying infrastructure..."
+	@if [ ! -f infra/terraform.tfvars ]; then \
+		echo "Error: infra/terraform.tfvars not found. Copy from terraform.tfvars.example and configure."; \
+		exit 1; \
+	fi
+	cd infra && terraform init
+	cd infra && terraform plan -out=tfplan
+	@echo ""
+	@echo "Review the plan above. Continue with deployment? [y/N]"
+	@read -r REPLY; \
+	if [ "$$REPLY" = "y" ] || [ "$$REPLY" = "Y" ]; then \
+		cd infra && terraform apply tfplan; \
+		echo ""; \
+		echo "Deployment completed! Check outputs above for URLs and resource IDs."; \
+	else \
+		echo "Deployment cancelled."; \
+		cd infra && rm -f tfplan; \
+	fi
 
-# Lambda packaging
-package-lambda:
-	@echo "📦 Packaging Lambda function..."
-	./scripts/package-lambda.sh
+destroy-infra: ## Destroy infrastructure using Terraform
+	@echo "WARNING: This will destroy ALL infrastructure resources!"
+	@echo "This action cannot be undone. Continue? [y/N]"
+	@read -r REPLY; \
+	if [ "$$REPLY" = "y" ] || [ "$$REPLY" = "Y" ]; then \
+		cd infra && terraform destroy; \
+		echo "Infrastructure destroyed."; \
+	else \
+		echo "Destruction cancelled."; \
+	fi
 
-package-lambda-with-layer:
-	@echo "📦 Packaging Lambda function with layer..."
-	./scripts/package-lambda.sh --with-layer
-
-validate-package:
-	@echo "🔍 Validating deployment package..."
-	./scripts/validate-deployment.sh
-
-# Infrastructure commands
-deploy-infra:
+plan-infra: ## Show Terraform plan without applying
+	@echo "Generating Terraform plan..."
+	@if [ ! -f infra/terraform.tfvars ]; then \
+		echo "Error: infra/terraform.tfvars not found. Copy from terraform.tfvars.example and configure."; \
+		exit 1; \
+	fi
 	cd infra && terraform init
 	cd infra && terraform plan
-	cd infra && terraform apply
 
-destroy-infra:
-	cd infra && terraform destroy
+# Deployment Helpers
+upload-corpus: ## Upload corpus documents to S3 (requires BUCKET_NAME and CORPUS_DIR env vars)
+	@if [ -z "$(BUCKET_NAME)" ] || [ -z "$(CORPUS_DIR)" ]; then \
+		echo "Error: BUCKET_NAME and CORPUS_DIR environment variables required"; \
+		echo "Usage: make upload-corpus BUCKET_NAME=my-bucket CORPUS_DIR=./corpus"; \
+		exit 1; \
+	fi
+	./scripts/upload-corpus.sh $(BUCKET_NAME) $(CORPUS_DIR)
 
-# Utility commands
-setup-env:
-	cp .env.example .env
-	cp apps/web/.env.example apps/web/.env
-	cp apps/api/.env.example apps/api/.env
-	@echo "Please configure your environment variables in the .env files"
+validate-deployment: ## Validate deployment by running health checks
+	@echo "Validating deployment..."
+	@if [ -z "$(API_URL)" ]; then \
+		echo "Error: API_URL environment variable required"; \
+		echo "Usage: make validate-deployment API_URL=https://api.example.com"; \
+		exit 1; \
+	fi
+	./scripts/validate-deployment.sh $(API_URL)
+
+# Full Deployment Workflow
+deploy-all: package-lambda build-web deploy-infra ## Build and deploy everything
+	@echo "Full deployment completed!"
+	@echo "Next steps:"
+	@echo "1. Upload corpus documents: make upload-corpus BUCKET_NAME=<bucket> CORPUS_DIR=<dir>"
+	@echo "2. Validate deployment: make validate-deployment API_URL=<api-url>"
+
+# Development Workflow
+dev-setup: install ## Set up development environment
+	@echo "Setting up development environment..."
+	@if [ ! -f apps/api/.env ]; then \
+		cp apps/api/.env.example apps/api/.env; \
+		echo "Created apps/api/.env from example. Please configure it."; \
+	fi
+	@if [ ! -f apps/web/.env ]; then \
+		cp apps/web/.env.example apps/web/.env; \
+		echo "Created apps/web/.env from example. Please configure it."; \
+	fi
+	@if [ ! -f infra/terraform.tfvars ]; then \
+		cp infra/terraform.tfvars.example infra/terraform.tfvars; \
+		echo "Created infra/terraform.tfvars from example. Please configure it."; \
+	fi
+	@echo "Development environment setup complete!"
+
+# CI/CD Helpers
+ci-test: install lint test ## Run CI test suite
+	@echo "CI test suite completed successfully"
+
+ci-build: package-lambda build-web ## Build all artifacts for CI
+	@echo "CI build completed successfully"
+
+# Utility Commands
+outputs: ## Show Terraform outputs
+	@cd infra && terraform output
+
+logs: ## Show recent Lambda logs (requires FUNCTION_NAME env var)
+	@if [ -z "$(FUNCTION_NAME)" ]; then \
+		echo "Error: FUNCTION_NAME environment variable required"; \
+		echo "Usage: make logs FUNCTION_NAME=fedrag-api"; \
+		exit 1; \
+	fi
+	aws logs tail /aws/lambda/$(FUNCTION_NAME) --follow
+
+# Version and Info
+version: ## Show version information
+	@echo "FedRag Privacy RAG Assistant"
+	@echo "Node.js: $$(node --version)"
+	@echo "pnpm: $$(pnpm --version)"
+	@echo "Terraform: $$(terraform version -json | jq -r '.terraform_version' 2>/dev/null || terraform version)"
+	@echo "AWS CLI: $$(aws --version)"
+
+# Documentation
+docs: ## Generate and serve documentation
+	@echo "Documentation available in README.md and .github/README.md"
+	@echo "API documentation: apps/api/README.md"
+	@echo "Web documentation: apps/web/README.md"
+	@echo "Infrastructure documentation: infra/README.md"
+
+# Security
+security-scan: ## Run security scans locally
+	@echo "Running security scans..."
+	@if command -v trivy >/dev/null 2>&1; then \
+		trivy fs . --severity HIGH,CRITICAL; \
+	else \
+		echo "Trivy not installed. Install with: brew install trivy"; \
+	fi
+	@if command -v tfsec >/dev/null 2>&1; then \
+		cd infra && tfsec .; \
+	else \
+		echo "tfsec not installed. Install with: brew install tfsec"; \
+	fi
+
+# Backup and Restore
+backup-state: ## Backup Terraform state (requires BACKUP_BUCKET env var)
+	@if [ -z "$(BACKUP_BUCKET)" ]; then \
+		echo "Error: BACKUP_BUCKET environment variable required"; \
+		exit 1; \
+	fi
+	@echo "Backing up Terraform state..."
+	cd infra && terraform state pull > terraform.tfstate.backup
+	aws s3 cp infra/terraform.tfstate.backup s3://$(BACKUP_BUCKET)/terraform-state-backups/terraform.tfstate.$$(date +%Y%m%d-%H%M%S)
+	@echo "State backed up to S3"

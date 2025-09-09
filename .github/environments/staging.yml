@@ -1,0 +1,35 @@
+# GitHub Environment Configuration for Staging
+# This file documents the required environment settings for GitHub Actions
+# Configure these in your GitHub repository settings under Environments
+
+name: staging
+
+# Protection rules (configure in GitHub UI)
+protection_rules:
+  required_reviewers: 0  # No approval required for staging
+  prevent_self_review: false
+  dismiss_stale_reviews: false
+  require_code_owner_reviews: false
+
+# Environment variables (configure in GitHub UI)
+variables:
+  ENVIRONMENT: staging
+  AWS_REGION: us-east-1
+
+# Secrets required (configure in GitHub UI)
+secrets:
+  # AWS IAM Role for GitHub Actions OIDC
+  AWS_ROLE_ARN: "arn:aws:iam::ACCOUNT-ID:role/GitHubActionsRole"
+  
+  # Terraform variables
+  TF_VAR_PROJECT_NAME: "fedrag"
+  TF_VAR_ENVIRONMENT: "staging"
+  TF_VAR_AWS_REGION: "us-east-1"
+  TF_VAR_COGNITO_DOMAIN_PREFIX: "fedrag-staging"
+  TF_VAR_WEB_CALLBACK_URLS: '["https://staging.your-domain.com/callback"]'
+  TF_VAR_WEB_LOGOUT_URLS: '["https://staging.your-domain.com/login"]'
+
+# Deployment branches
+deployment_branches:
+  - main
+  - develop

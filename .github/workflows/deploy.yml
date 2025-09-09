@@ -1,0 +1,367 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      skip_tests:
+        description: 'Skip tests and linting'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linting
+        run: pnpm run lint
+
+      - name: Run tests
+        run: pnpm run test
+
+      - name: Build applications
+        run: |
+          cd apps/api && pnpm run build
+          cd apps/web && pnpm run build
+
+      - name: Package Lambda
+        run: |
+          cd apps/api && pnpm run package
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: production-artifacts
+          path: |
+            apps/api/lambda-deployment.zip
+            apps/web/dist/
+          retention-days: 30
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: [build-and-test]
+    if: always() && (needs.build-and-test.result == 'success' || inputs.skip_tests)
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      plan-exists: ${{ steps.plan.outputs.plan-exists }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-TerraformPlan
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ~1.5.0
+
+      - name: Create terraform.tfvars
+        working-directory: infra
+        run: |
+          cat > terraform.tfvars << EOF
+          project_name = "${{ secrets.TF_VAR_PROJECT_NAME }}"
+          environment = "${{ inputs.environment || 'production' }}"
+          aws_region = "${{ secrets.TF_VAR_AWS_REGION }}"
+          cognito_domain_prefix = "${{ secrets.TF_VAR_COGNITO_DOMAIN_PREFIX }}"
+          web_callback_urls = ${{ secrets.TF_VAR_WEB_CALLBACK_URLS }}
+          web_logout_urls = ${{ secrets.TF_VAR_WEB_LOGOUT_URLS }}
+          EOF
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infra
+        id: plan
+        run: |
+          terraform plan -detailed-exitcode -out=tfplan || export TF_EXIT_CODE=$?
+          
+          if [ $TF_EXIT_CODE -eq 0 ]; then
+            echo "plan-exists=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          elif [ $TF_EXIT_CODE -eq 2 ]; then
+            echo "plan-exists=true" >> $GITHUB_OUTPUT
+            echo "Changes detected"
+            terraform show -no-color tfplan > plan.txt
+          else
+            echo "Terraform plan failed"
+            exit $TF_EXIT_CODE
+          fi
+
+      - name: Upload Terraform plan
+        if: steps.plan.outputs.plan-exists == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-plan-${{ github.sha }}
+          path: |
+            infra/tfplan
+            infra/plan.txt
+          retention-days: 30
+
+      - name: Display plan summary
+        if: steps.plan.outputs.plan-exists == 'true'
+        working-directory: infra
+        run: |
+          echo "## Terraform Plan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          head -50 plan.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  approval:
+    name: Manual Approval
+    runs-on: ubuntu-latest
+    needs: [terraform-plan]
+    if: needs.terraform-plan.outputs.plan-exists == 'true'
+    environment: 
+      name: ${{ inputs.environment || 'production' }}
+      url: ${{ steps.deploy.outputs.web-url }}
+    
+    steps:
+      - name: Manual approval checkpoint
+        run: |
+          echo "🚀 Deployment approved for ${{ inputs.environment || 'production' }} environment"
+          echo "Proceeding with Terraform apply..."
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: [terraform-plan, approval]
+    if: always() && needs.terraform-plan.outputs.plan-exists == 'true' && needs.approval.result == 'success'
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      api-url: ${{ steps.outputs.outputs.api-url }}
+      web-url: ${{ steps.outputs.outputs.web-url }}
+      kb-id: ${{ steps.outputs.outputs.kb-id }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-TerraformApply
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ~1.5.0
+          terraform_wrapper: false
+
+      - name: Download Terraform plan
+        uses: actions/download-artifact@v3
+        with:
+          name: terraform-plan-${{ github.sha }}
+          path: infra/
+
+      - name: Create terraform.tfvars
+        working-directory: infra
+        run: |
+          cat > terraform.tfvars << EOF
+          project_name = "${{ secrets.TF_VAR_PROJECT_NAME }}"
+          environment = "${{ inputs.environment || 'production' }}"
+          aws_region = "${{ secrets.TF_VAR_AWS_REGION }}"
+          cognito_domain_prefix = "${{ secrets.TF_VAR_COGNITO_DOMAIN_PREFIX }}"
+          web_callback_urls = ${{ secrets.TF_VAR_WEB_CALLBACK_URLS }}
+          web_logout_urls = ${{ secrets.TF_VAR_WEB_LOGOUT_URLS }}
+          EOF
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -auto-approve tfplan
+
+      - name: Get Terraform outputs
+        working-directory: infra
+        id: outputs
+        run: |
+          echo "api-url=$(terraform output -raw api_url)" >> $GITHUB_OUTPUT
+          echo "web-url=$(terraform output -raw web_url)" >> $GITHUB_OUTPUT
+          echo "kb-id=$(terraform output -raw knowledge_base_id)" >> $GITHUB_OUTPUT
+
+      - name: Display deployment info
+        run: |
+          echo "## 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.outputs.outputs.api-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Web URL:** ${{ steps.outputs.outputs.web-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Knowledge Base ID:** ${{ steps.outputs.outputs.kb-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Upload corpus documents to S3" >> $GITHUB_STEP_SUMMARY
+          echo "2. Wait for Knowledge Base sync" >> $GITHUB_STEP_SUMMARY
+          echo "3. Test the application" >> $GITHUB_STEP_SUMMARY
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: [terraform-apply]
+    if: always() && needs.terraform-apply.result == 'success'
+    
+    permissions:
+      contents: read
+      id-token: write
+      
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-FrontendDeploy
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: production-artifacts
+          path: ./artifacts
+
+      - name: Deploy to S3
+        run: |
+          # Get bucket name from Terraform outputs
+          BUCKET_NAME=$(aws ssm get-parameter --name "/${{ secrets.TF_VAR_PROJECT_NAME }}/${{ inputs.environment || 'production' }}/web-bucket-name" --query 'Parameter.Value' --output text)
+          
+          # Sync web assets to S3
+          aws s3 sync ./artifacts/apps/web/dist/ s3://$BUCKET_NAME/ --delete
+          
+          # Invalidate CloudFront cache
+          DISTRIBUTION_ID=$(aws ssm get-parameter --name "/${{ secrets.TF_VAR_PROJECT_NAME }}/${{ inputs.environment || 'production' }}/cloudfront-distribution-id" --query 'Parameter.Value' --output text)
+          aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
+
+  post-deployment:
+    name: Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: [terraform-apply, deploy-frontend]
+    if: always() && needs.terraform-apply.result == 'success' && needs.deploy-frontend.result == 'success'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Validation
+
+      - name: Run deployment validation
+        run: |
+          chmod +x scripts/validate-deployment.sh
+          ./scripts/validate-deployment.sh ${{ needs.terraform-apply.outputs.api-url }}
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🎉 Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Application:** ${{ needs.terraform-apply.outputs.web-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **API:** ${{ needs.terraform-apply.outputs.api-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Post-Deployment Tasks:" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Upload corpus documents" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Verify Knowledge Base sync" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Run end-to-end tests" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Update documentation" >> $GITHUB_STEP_SUMMARY
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [terraform-apply, deploy-frontend, post-deployment]
+    if: failure() && needs.terraform-apply.result == 'success'
+    
+    permissions:
+      contents: read
+      id-token: write
+      
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Rollback
+
+      - name: Notify of rollback
+        run: |
+          echo "## ⚠️ Deployment Failed - Rollback Required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment encountered errors after infrastructure was applied." >> $GITHUB_STEP_SUMMARY
+          echo "Manual intervention may be required to rollback changes." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Failed Job:** ${{ needs.post-deployment.result == 'failure' && 'post-deployment' || 'deploy-frontend' }}" >> $GITHUB_STEP_SUMMARY

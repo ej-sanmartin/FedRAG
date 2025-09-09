@@ -149,7 +149,7 @@
   - Add Tailwind CSS configuration and base styles
   - _Requirements: 6.1, 6.2, 6.5_
 
-- [ ] 19. Create deployment scripts and CI/CD configuration
+- [x] 19. Create deployment scripts and CI/CD configuration
 
   - Implement scripts/upload-corpus.sh for S3 document upload
   - Create Makefile with package-lambda, deploy-infra, destroy-infra targets
