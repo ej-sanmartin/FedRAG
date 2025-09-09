@@ -24,8 +24,16 @@ clean:
 
 # Lambda packaging
 package-lambda:
-	cd apps/api && pnpm build
-	cd apps/api && zip -r lambda-deployment.zip dist/ node_modules/
+	@echo "📦 Packaging Lambda function..."
+	./scripts/package-lambda.sh
+
+package-lambda-with-layer:
+	@echo "📦 Packaging Lambda function with layer..."
+	./scripts/package-lambda.sh --with-layer
+
+validate-package:
+	@echo "🔍 Validating deployment package..."
+	./scripts/validate-deployment.sh
 
 # Infrastructure commands
 deploy-infra:

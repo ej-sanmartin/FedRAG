@@ -5,12 +5,21 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsup",
+    "build": "NODE_ENV=production tsup",
+    "build:dev": "NODE_ENV=development tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "lint": "eslint src --ext .ts",
-    "type-check": "tsc --noEmit"
+    "lint:fix": "eslint src --ext .ts --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "package": "pnpm run clean && pnpm run build && pnpm run package:zip",
+    "package:zip": "cd dist && zip -r ../lambda-deployment.zip . && cd ..",
+    "package:layer": "mkdir -p layer/nodejs && cp package*.json layer/nodejs/ && cd layer && zip -r ../layer.zip . && cd ..",
+    "validate": "pnpm run type-check && pnpm run lint && pnpm run test"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-agent-runtime": "^3.470.0",
@@ -19,12 +28,26 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.130",
     "@types/node": "^20.10.0",
-    "@typescript-eslint/eslint-plugin": "^6.14.0",
-    "@typescript-eslint/parser": "^6.14.0",
-    "aws-sdk-client-mock": "^3.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "aws-sdk-client-mock": "^4.0.0",
     "eslint": "^8.55.0",
+    "sinon": "^17.0.0",
     "tsup": "^8.0.1",
     "typescript": "^5.2.2",
     "vitest": "^1.0.0"
-  }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "bedrock",
+    "rag",
+    "privacy",
+    "pii"
+  ]
 }
