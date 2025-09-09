@@ -350,8 +350,8 @@ export function createBedrockKnowledgeBase(
  */
 export function isGuardrailIntervention(error: AwsServiceError): boolean {
   return error.name === 'GuardrailIntervention' || 
-         error.message.toLowerCase().includes('guardrail') ||
-         error.message.toLowerCase().includes('content policy');
+         (error.message && error.message.toLowerCase().includes('guardrail')) ||
+         (error.message && error.message.toLowerCase().includes('content policy'));
 }
 
 /**

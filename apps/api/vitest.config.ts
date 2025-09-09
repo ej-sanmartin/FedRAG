@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'node',
     
     // Test file patterns
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
     
     // Coverage configuration
@@ -18,7 +18,8 @@ export default defineConfig({
         'dist/',
         '**/*.test.ts',
         '**/*.config.ts',
-        'src/types.ts'
+        'src/types.ts',
+        'tests/'
       ],
       thresholds: {
         global: {

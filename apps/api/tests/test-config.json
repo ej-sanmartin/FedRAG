@@ -1,0 +1,89 @@
+{
+  "testSuites": {
+    "unit": {
+      "description": "Core unit tests for existing functionality",
+      "pattern": "src/**/*.test.ts",
+      "timeout": 10000,
+      "coverage": {
+        "enabled": true,
+        "threshold": {
+          "branches": 75,
+          "functions": 75,
+          "lines": 75,
+          "statements": 75
+        }
+      }
+    },
+    "comprehensive": {
+      "description": "Comprehensive unit tests for edge cases and advanced scenarios",
+      "pattern": "tests/unit/**/*.test.ts",
+      "timeout": 15000,
+      "coverage": {
+        "enabled": true,
+        "threshold": {
+          "branches": 80,
+          "functions": 80,
+          "lines": 80,
+          "statements": 80
+        }
+      }
+    },
+    "integration": {
+      "description": "Integration tests for complete request flows",
+      "pattern": "src/index.test.ts",
+      "timeout": 20000,
+      "coverage": {
+        "enabled": true,
+        "threshold": {
+          "branches": 70,
+          "functions": 70,
+          "lines": 70,
+          "statements": 70
+        }
+      }
+    }
+  },
+  "requirements": {
+    "8.1": {
+      "description": "PII functionality tests for overlapping spans and edge cases",
+      "testFiles": ["tests/unit/pii.test.ts", "src/pii.test.ts"],
+      "coverage": ["src/pii.ts"]
+    },
+    "8.2": {
+      "description": "Knowledge base integration tests with proper API calls and response handling",
+      "testFiles": ["tests/unit/kb.test.ts", "src/bedrock.test.ts"],
+      "coverage": ["src/bedrock.ts"]
+    },
+    "8.3": {
+      "description": "Guardrail behavior tests simulating disallowed topics and intervention responses",
+      "testFiles": ["tests/unit/guardrail.test.ts"],
+      "coverage": ["src/bedrock.ts", "src/index.ts"]
+    },
+    "8.4": {
+      "description": "Empty citations tests forcing 'Insufficient basis' template scenarios",
+      "testFiles": ["tests/unit/kb.test.ts"],
+      "coverage": ["src/bedrock.ts"]
+    },
+    "8.5": {
+      "description": "CI/CD integration with test execution and coverage requirements",
+      "testFiles": ["all"],
+      "coverage": ["src/"]
+    }
+  },
+  "performance": {
+    "piiMasking": {
+      "maxLatency": 2000,
+      "maxEntities": 1000,
+      "maxTextLength": 100000
+    },
+    "knowledgeBase": {
+      "maxLatency": 1000,
+      "maxCitations": 50,
+      "maxConcurrentCalls": 20
+    },
+    "guardrails": {
+      "maxLatency": 5000,
+      "maxQueryLength": 10000
+    }
+  }
+}
