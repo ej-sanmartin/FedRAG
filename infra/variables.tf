@@ -4,7 +4,7 @@ variable "project_name" {
   description = "Name of the project, used as prefix for resources"
   type        = string
   default     = "fedrag"
-  
+
   validation {
     condition     = can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", var.project_name))
     error_message = "Project name must start with a letter, contain only lowercase letters, numbers, and hyphens, and end with a letter or number."
@@ -15,7 +15,7 @@ variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
   default     = "dev"
-  
+
   validation {
     condition     = contains(["dev", "staging", "prod"], var.environment)
     error_message = "Environment must be one of: dev, staging, prod."
@@ -37,4 +37,22 @@ variable "common_tags" {
     ManagedBy   = "Terraform"
     Application = "Privacy-First RAG Assistant"
   }
+}
+
+# Cognito Configuration Variables
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID for JWT authorization"
+  type        = string
+}
+
+variable "cognito_user_pool_client_id" {
+  description = "Cognito User Pool Client ID for JWT authorization"
+  type        = string
+}
+
+# Knowledge Base Configuration Variable
+variable "knowledge_base_id" {
+  description = "Bedrock Knowledge Base ID (to be provided after KB creation)"
+  type        = string
+  default     = "placeholder-kb-id"
 }

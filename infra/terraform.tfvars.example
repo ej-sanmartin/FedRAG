@@ -14,3 +14,12 @@ common_tags = {
   Owner       = "your-team-name"
   CostCenter  = "your-cost-center"
 }
+
+# Cognito Configuration (required for API authentication)
+# These values will be available after deploying the Cognito infrastructure
+cognito_user_pool_id        = "us-east-1_XXXXXXXXX"
+cognito_user_pool_client_id = "your-cognito-client-id"
+
+# Knowledge Base Configuration (required for API functionality)
+# This value will be available after deploying the Knowledge Base infrastructure
+knowledge_base_id = "your-knowledge-base-id"

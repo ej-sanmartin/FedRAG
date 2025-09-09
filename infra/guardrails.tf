@@ -5,8 +5,8 @@
 # Bedrock Guardrail Resource
 resource "aws_bedrock_guardrail" "main" {
   name                      = "${var.project_name}-guardrail"
-  description              = "FedRag Privacy-First RAG Assistant Guardrail with PII protection and content filtering"
-  blocked_input_messaging  = "I cannot process this request as it contains content that violates our usage policies. Please rephrase your question without sensitive information or prohibited topics."
+  description               = "FedRag Privacy-First RAG Assistant Guardrail with PII protection and content filtering"
+  blocked_input_messaging   = "I cannot process this request as it contains content that violates our usage policies. Please rephrase your question without sensitive information or prohibited topics."
   blocked_outputs_messaging = "I cannot provide this response as it may contain sensitive information or violate our content policies. Please try rephrasing your question."
 
   # Content Policy Configuration - Harm Categories with HIGH threshold
@@ -15,42 +15,42 @@ resource "aws_bedrock_guardrail" "main" {
     filters_config {
       input_strength  = "HIGH"
       output_strength = "HIGH"
-      type           = "HATE"
+      type            = "HATE"
     }
 
     # Violence Filter
     filters_config {
       input_strength  = "HIGH"
       output_strength = "HIGH"
-      type           = "VIOLENCE"
+      type            = "VIOLENCE"
     }
 
-    # Self-Harm Filter
+    # Insults Filter (SELF_HARM not available, using INSULTS instead)
     filters_config {
       input_strength  = "HIGH"
       output_strength = "HIGH"
-      type           = "SELF_HARM"
+      type            = "INSULTS"
     }
 
     # Sexual Content Filter
     filters_config {
       input_strength  = "HIGH"
       output_strength = "HIGH"
-      type           = "SEXUAL"
+      type            = "SEXUAL"
     }
 
     # Misconduct Filter
     filters_config {
       input_strength  = "HIGH"
       output_strength = "HIGH"
-      type           = "MISCONDUCT"
+      type            = "MISCONDUCT"
     }
 
     # Prompt Attack Filter
     filters_config {
       input_strength  = "HIGH"
       output_strength = "HIGH"
-      type           = "PROMPT_ATTACK"
+      type            = "PROMPT_ATTACK"
     }
   }
 
@@ -58,97 +58,97 @@ resource "aws_bedrock_guardrail" "main" {
   sensitive_information_policy_config {
     # Email Address PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "EMAIL"
     }
 
     # Phone Number PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "PHONE"
     }
 
     # Social Security Number PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "US_SOCIAL_SECURITY_NUMBER"
     }
 
     # Credit Card Number PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "CREDIT_DEBIT_CARD_NUMBER"
     }
 
     # Driver's License PII
     pii_entities_config {
-      action = "MASK"
-      type   = "US_DRIVER_LICENSE"
+      action = "ANONYMIZE"
+      type   = "DRIVER_ID"
     }
 
     # Passport Number PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "US_PASSPORT_NUMBER"
     }
 
     # Bank Account Number PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "US_BANK_ACCOUNT_NUMBER"
     }
 
     # Bank Routing Number PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "US_BANK_ROUTING_NUMBER"
     }
 
     # Address PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "ADDRESS"
     }
 
     # Name PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "NAME"
     }
 
     # Age PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "AGE"
     }
 
     # Username PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "USERNAME"
     }
 
     # Password PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "PASSWORD"
     }
 
     # IP Address PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "IP_ADDRESS"
     }
 
     # MAC Address PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "MAC_ADDRESS"
     }
 
     # URL PII
     pii_entities_config {
-      action = "MASK"
+      action = "ANONYMIZE"
       type   = "URL"
     }
   }
@@ -234,7 +234,7 @@ resource "aws_bedrock_guardrail" "main" {
     words_config {
       text = "profanity"
     }
-    
+
     words_config {
       text = "offensive"
     }
@@ -257,9 +257,10 @@ resource "aws_bedrock_guardrail_version" "main" {
   guardrail_arn = aws_bedrock_guardrail.main.guardrail_arn
   description   = "Production version of FedRag guardrail configuration"
 
-  tags = {
-    Name        = "${var.project_name}-guardrail-version"
-    Environment = var.environment
-    Version     = "1.0"
-  }
+  # Note: tags not supported on guardrail versions
+  # tags = {
+  #   Name        = "${var.project_name}-guardrail-version"
+  #   Environment = var.environment
+  #   Version     = "1.0"
+  # }
 }

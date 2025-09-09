@@ -67,7 +67,7 @@
   - Add custom blocked input/output messaging
   - _Requirements: 5.4, 3.4, 1.5_
 
-- [ ] 9. Create Terraform API infrastructure
+- [x] 9. Create Terraform API infrastructure
 
   - Implement infra/api.tf with Lambda function configuration
   - Set up API Gateway HTTP API with CORS and JWT authorizer

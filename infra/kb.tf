@@ -47,37 +47,102 @@ resource "aws_s3_bucket_public_access_block" "corpus" {
   restrict_public_buckets = true
 }
 
-# OpenSearch Serverless VECTOR Collection using aws-ia module
-module "opensearch_serverless" {
-  source = "aws-ia/opensearch-serverless/aws"
-  version = "~> 2.0"
-
-  collection_name = "${var.project_name}-kb-collection"
-  collection_type = "VECTORSEARCH"
-  
-  # Security policy for encryption
-  security_policy_name = "${var.project_name}-kb-security-policy"
-  security_policy_description = "Security policy for FedRag knowledge base collection"
-  
-  # Network policy for access
-  network_policy_name = "${var.project_name}-kb-network-policy"
-  network_policy_description = "Network policy for FedRag knowledge base collection"
-  
-  # Data access policy
-  data_access_policy_name = "${var.project_name}-kb-data-policy"
-  data_access_policy_description = "Data access policy for FedRag knowledge base collection"
-  
-  # Principal ARNs that need access to the collection
-  principal_arns = [
-    aws_iam_role.bedrock_kb_role.arn,
-    aws_iam_role.bedrock_kb_execution_role.arn
-  ]
+# OpenSearch Serverless Collection for Vector Search
+resource "aws_opensearchserverless_collection" "main" {
+  name = "${var.project_name}-kb-collection"
+  type = "VECTORSEARCH"
 
   tags = {
     Name        = "${var.project_name}-kb-collection"
     Environment = var.environment
     Purpose     = "Knowledge Base Vector Search"
   }
+
+  depends_on = [
+    aws_opensearchserverless_security_policy.encryption,
+    aws_opensearchserverless_access_policy.data_access
+  ]
+}
+
+# Security Policy for Encryption
+resource "aws_opensearchserverless_security_policy" "encryption" {
+  name = "${var.project_name}-kb-security-policy"
+  type = "encryption"
+
+  policy = jsonencode({
+    Rules = [
+      {
+        Resource = [
+          "collection/${var.project_name}-kb-collection"
+        ]
+        ResourceType = "collection"
+      }
+    ]
+    AWSOwnedKey = true
+  })
+}
+
+# Network Policy for Access
+resource "aws_opensearchserverless_security_policy" "network" {
+  name = "${var.project_name}-kb-network-policy"
+  type = "network"
+
+  policy = jsonencode([
+    {
+      Rules = [
+        {
+          Resource = [
+            "collection/${var.project_name}-kb-collection"
+          ]
+          ResourceType = "collection"
+        }
+      ]
+      AllowFromPublic = true
+    }
+  ])
+}
+
+# Data Access Policy
+resource "aws_opensearchserverless_access_policy" "data_access" {
+  name = "${var.project_name}-kb-data-policy"
+  type = "data"
+
+  policy = jsonencode([
+    {
+      Rules = [
+        {
+          Resource = [
+            "collection/${var.project_name}-kb-collection"
+          ]
+          Permission = [
+            "aoss:CreateCollectionItems",
+            "aoss:DeleteCollectionItems",
+            "aoss:UpdateCollectionItems",
+            "aoss:DescribeCollectionItems"
+          ]
+          ResourceType = "collection"
+        },
+        {
+          Resource = [
+            "index/${var.project_name}-kb-collection/*"
+          ]
+          Permission = [
+            "aoss:CreateIndex",
+            "aoss:DeleteIndex",
+            "aoss:UpdateIndex",
+            "aoss:DescribeIndex",
+            "aoss:ReadDocument",
+            "aoss:WriteDocument"
+          ]
+          ResourceType = "index"
+        }
+      ]
+      Principal = [
+        aws_iam_role.bedrock_kb_role.arn,
+        aws_iam_role.bedrock_kb_execution_role.arn
+      ]
+    }
+  ])
 }
 
 # IAM Role for Bedrock Knowledge Base
@@ -144,7 +209,7 @@ resource "aws_iam_policy" "bedrock_kb_opensearch_policy" {
         Action = [
           "aoss:APIAccessAll"
         ]
-        Resource = module.opensearch_serverless.collection_arn
+        Resource = aws_opensearchserverless_collection.main.arn
       }
     ]
   })
@@ -216,10 +281,13 @@ resource "aws_iam_role" "bedrock_kb_execution_role" {
 }
 
 # Bedrock Knowledge Base
+# Note: These resources require AWS provider version with Bedrock support
+# Uncomment when Bedrock Knowledge Base resources are available in the provider
+/*
 resource "aws_bedrock_knowledge_base" "main" {
   name     = "${var.project_name}-knowledge-base"
   role_arn = aws_iam_role.bedrock_kb_role.arn
-  
+
   description = "FedRag Privacy-First RAG Assistant Knowledge Base"
 
   knowledge_base_configuration {
@@ -231,7 +299,7 @@ resource "aws_bedrock_knowledge_base" "main" {
 
   storage_configuration {
     opensearch_serverless_configuration {
-      collection_arn    = module.opensearch_serverless.collection_arn
+      collection_arn    = aws_opensearchserverless_collection.main.arn
       vector_index_name = "fedrag-vector-index"
       field_mapping {
         vector_field   = "vector"
@@ -251,7 +319,7 @@ resource "aws_bedrock_knowledge_base" "main" {
     aws_iam_role_policy_attachment.bedrock_kb_s3,
     aws_iam_role_policy_attachment.bedrock_kb_opensearch,
     aws_iam_role_policy_attachment.bedrock_kb_model,
-    module.opensearch_serverless
+    aws_opensearchserverless_collection.main
   ]
 }
 
@@ -259,13 +327,13 @@ resource "aws_bedrock_knowledge_base" "main" {
 resource "aws_bedrock_knowledge_base_data_source" "main" {
   knowledge_base_id = aws_bedrock_knowledge_base.main.id
   name              = "${var.project_name}-s3-data-source"
-  
+
   description = "S3 data source for FedRag knowledge base corpus"
 
   data_source_configuration {
     s3_configuration {
       bucket_arn = aws_s3_bucket.corpus.arn
-      
+
       # Optional: specify inclusion prefixes if needed
       # inclusion_prefixes = ["documents/"]
     }
@@ -288,6 +356,7 @@ resource "aws_bedrock_knowledge_base_data_source" "main" {
     aws_s3_bucket.corpus
   ]
 }
+*/
 
 # Data sources for current AWS account and region
 data "aws_caller_identity" "current" {}
