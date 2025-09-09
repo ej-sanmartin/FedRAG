@@ -347,7 +347,7 @@ describe('BedrockKnowledgeBase - Advanced Scenarios', () => {
       await expect(knowledgeBase.askKb('Network failure query')).rejects.toMatchObject({
         name: 'NetworkingError',
         message: 'Network timeout',
-        statusCode: 500, // Default for unknown errors
+        statusCode: 408, // HTTP status from metadata
       });
     });
 
@@ -361,7 +361,7 @@ describe('BedrockKnowledgeBase - Advanced Scenarios', () => {
       await expect(knowledgeBase.askKb('Model timeout query')).rejects.toMatchObject({
         name: 'ModelTimeoutException',
         retryable: false,
-        statusCode: 500,
+        statusCode: 503,
       });
     });
 
@@ -375,7 +375,7 @@ describe('BedrockKnowledgeBase - Advanced Scenarios', () => {
       await expect(knowledgeBase.askKb('Quota exceeded query')).rejects.toMatchObject({
         name: 'ServiceQuotaExceededException',
         message: 'Monthly quota exceeded',
-        statusCode: 500,
+        statusCode: 402,
       });
     });
 

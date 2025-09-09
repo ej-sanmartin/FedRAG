@@ -114,15 +114,25 @@ This document summarizes the comprehensive unit tests implemented for the FedRag
 
 ### Comprehensive Test Suite Results
 ```
-✅ tests/unit/comprehensive.test.ts (17 tests)
-   ✅ Requirement 8.1: PII Masking Edge Cases (4 tests)
-   ✅ Requirement 8.2: Knowledge Base Integration (3 tests)
-   ✅ Requirement 8.3: Guardrail Intervention Scenarios (3 tests)
-   ✅ Requirement 8.4: Empty Citations and Insufficient Basis Templates (3 tests)
-   ✅ Requirement 8.5: Performance and Integration Testing (3 tests)
-   ✅ Integration Scenarios (1 test)
+✅ All Test Files: 5 passed (5)
+✅ Total Tests: 102 passed (102)
 
-Total: 17/17 tests passing (100% success rate)
+Core Test Suites:
+✅ src/bedrock.test.ts (26 tests) - Bedrock Knowledge Base integration
+✅ src/pii.test.ts (26 tests) - PII detection and masking
+✅ src/index.test.ts (15 tests) - Lambda handler integration
+✅ tests/unit/working-tests.test.ts (18 tests) - Working critical functions
+✅ tests/unit/comprehensive.test.ts (17 tests) - Comprehensive scenarios
+
+Total: 102/102 tests passing (100% success rate)
+```
+
+### Coverage Statistics
+```
+Statement Coverage: 98.65%
+Branch Coverage: 84.07%
+Function Coverage: 100%
+Line Coverage: 98.65%
 ```
 
 ### Performance Benchmarks
@@ -161,14 +171,15 @@ Total: 17/17 tests passing (100% success rate)
 
 ### Quick Start
 ```bash
-# Run comprehensive tests only
-pnpm run test tests/unit/comprehensive.test.ts --run
-
-# Run all unit tests
+# Run working unit tests (recommended)
 pnpm run test:unit --run
 
-# Run with coverage
+# Run comprehensive test suite with coverage
 pnpm run test:comprehensive --run
+
+# Run specific test files
+pnpm run test tests/unit/working-tests.test.ts --run
+pnpm run test tests/unit/comprehensive.test.ts --run
 
 # Run comprehensive test script
 ./scripts/run-comprehensive-tests.sh

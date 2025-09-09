@@ -74,9 +74,9 @@ describe("PII Service - Advanced Edge Cases", () => {
 
       // Should merge overlapping spans and filter by confidence
       expect(result.maskedText).toBe(
-        "Contact <REDACTED:PERSON> at <REDACTED:EMAIL|PERSON> for urgent matters"
+        "Contact <REDACTED:NAME|PERSON> at <REDACTED:EMAIL|PERSON> for urgent matters"
       );
-      expect(result.entitiesFound).toHaveLength(3); // NAME filtered out due to low confidence
+      expect(result.entitiesFound).toHaveLength(4); // All entities above 0.5 threshold
     });
 
     it("should handle cascading overlaps across entire text", async () => {

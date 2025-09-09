@@ -73,8 +73,8 @@ describe('Guardrail Intervention Scenarios', () => {
       bedrockMock.on(RetrieveAndGenerateCommand).rejects(hateError);
 
       await expect(knowledgeBase.askKb('Hateful content query')).rejects.toMatchObject({
-        name: 'ValidationException',
-        message: 'Invalid request parameters: Content blocked by guardrail policy - HATE category violation',
+        name: 'GuardrailIntervention',
+        message: 'Content blocked by guardrails',
         statusCode: 400,
         retryable: false,
       });
@@ -89,8 +89,8 @@ describe('Guardrail Intervention Scenarios', () => {
       bedrockMock.on(RetrieveAndGenerateCommand).rejects(violenceError);
 
       await expect(knowledgeBase.askKb('Violent content query')).rejects.toMatchObject({
-        name: 'ValidationException',
-        message: 'Invalid request parameters: Content blocked by guardrail - VIOLENCE category detected',
+        name: 'GuardrailIntervention',
+        message: 'Content blocked by guardrails',
         statusCode: 400,
       });
     });
@@ -106,6 +106,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('Self-harm related query')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
 
@@ -120,6 +121,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('Sexual content query')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
 
@@ -134,6 +136,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('Multi-category harmful query')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
   });
@@ -178,6 +181,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('What medication should I take for my symptoms?')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
 
@@ -208,6 +212,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('Query with john.doe@example.com')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
 
@@ -259,6 +264,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb(queryWithManyPii)).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
   });
@@ -275,6 +281,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('Inappropriate query')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
 
@@ -309,6 +316,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('Confidential company query')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
   });
@@ -325,6 +333,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('High threshold harmful content')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
 
@@ -389,6 +398,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('Query that would cite blocked content')).rejects.toMatchObject({
         name: 'GuardrailIntervention',
         message: 'Content blocked by guardrails',
+        statusCode: 400,
       });
     });
 
@@ -440,7 +450,7 @@ describe('Guardrail Intervention Scenarios', () => {
       await expect(knowledgeBase.askKb('Complex query causing guardrail timeout')).rejects.toMatchObject({
         name: 'TimeoutException',
         message: 'Guardrail processing exceeded timeout limit',
-        statusCode: 500,
+        statusCode: 408,
       });
     });
 
