@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { AuthContextType, AuthState, User } from '../types/auth';
+import type { AuthContextType, AuthState } from '../types/auth';
 import { AuthContext } from './AuthContext';
+import * as cognito from '../lib/auth/cognito';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -15,54 +16,76 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading: true,
   });
 
-  // Check for existing token on mount
+  // Check for existing token on mount and validate it
   useEffect(() => {
-    const token = localStorage.getItem('fedrag_token');
-    const userStr = localStorage.getItem('fedrag_user');
-    
-    if (token && userStr) {
+    const initializeAuth = async () => {
       try {
-        const user: User = JSON.parse(userStr);
-        // TODO: Validate token expiration
+        const { isValid, user, token } = await cognito.validateToken();
+        
         setAuthState({
-          isAuthenticated: true,
+          isAuthenticated: isValid,
           user,
           token,
           isLoading: false,
         });
       } catch (error) {
-        // Error parsing stored user data - clear invalid data
-        localStorage.removeItem('fedrag_token');
-        localStorage.removeItem('fedrag_user');
-        setAuthState(prev => ({ ...prev, isLoading: false }));
+        // Silent fail for auth initialization - user will be prompted to login
+        setAuthState({
+          isAuthenticated: false,
+          user: null,
+          token: null,
+          isLoading: false,
+        });
       }
-    } else {
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = () => {
-    // TODO: Implement Cognito OAuth redirect
-    // This will be implemented in task 14
+    cognito.login().catch(() => {
+      // Error will be handled by the redirect or user can retry
+      // Login errors are typically due to configuration issues
+    });
   };
 
   const logout = () => {
-    localStorage.removeItem('fedrag_token');
-    localStorage.removeItem('fedrag_user');
     setAuthState({
       isAuthenticated: false,
       user: null,
       token: null,
       isLoading: false,
     });
-    // TODO: Redirect to Cognito logout URL
+    
+    // Cognito logout will clear tokens and redirect
+    cognito.logout();
   };
 
   const handleCallback = async (code: string) => {
-    // TODO: Implement OAuth code exchange
-    // This will be implemented in task 14
-    // Placeholder to avoid unused parameter warning
-    void code;
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true }));
+      
+      // Extract state parameter from URL if available
+      const urlParams = new URLSearchParams(window.location.search);
+      const state = urlParams.get('state');
+      
+      const { accessToken, user } = await cognito.handleCallback(code, state || undefined);
+      
+      setAuthState({
+        isAuthenticated: true,
+        user,
+        token: accessToken,
+        isLoading: false,
+      });
+    } catch (error) {
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+        token: null,
+        isLoading: false,
+      });
+      throw error; // Re-throw to let the callback component handle the error
+    }
   };
 
   const value: AuthContextType = {

@@ -107,7 +107,7 @@
   - Configure Vite with TypeScript and Tailwind CSS
   - _Requirements: 6.1, 6.2, 1.1_
 
-- [ ] 14. Implement Cognito authentication integration
+- [x] 14. Implement Cognito authentication integration
 
   - Create apps/web/src/lib/auth/cognito.ts with OAuth code flow
   - Implement login redirect to Hosted UI with PKCE
