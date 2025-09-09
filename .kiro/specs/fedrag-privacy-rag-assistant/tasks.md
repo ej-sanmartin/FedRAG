@@ -116,7 +116,7 @@
   - Add token validation and automatic refresh logic
   - _Requirements: 2.1, 2.2, 2.4, 6.1_
 
-- [ ] 15. Create API client with JWT integration
+- [x] 15. Create API client with JWT integration
 
   - Implement apps/web/src/lib/api/client.ts with fetch wrapper
   - Add automatic JWT header injection for authenticated requests
