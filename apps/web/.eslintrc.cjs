@@ -21,8 +21,13 @@ module.exports = {
       files: ['**/*.{ts,tsx}'],
       parser: '@typescript-eslint/parser',
       plugins: ['@typescript-eslint', 'react-refresh'],
+      env: {
+        browser: true,
+        es2020: true
+      },
       rules: {
         'no-unused-vars': 'off',
+        'no-undef': 'off', // TypeScript handles this
         '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
         '@typescript-eslint/no-explicit-any': 'warn',
         'react-refresh/only-export-components': [
