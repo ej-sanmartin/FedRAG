@@ -83,7 +83,7 @@
   - Add outputs for user pool ID and client ID
   - _Requirements: 5.6, 2.1, 2.2, 2.4_
 
-- [ ] 11. Set up Terraform frontend hosting infrastructure
+- [x] 11. Set up Terraform frontend hosting infrastructure
 
   - Create infra/hosting.tf with S3 static website configuration
   - Implement CloudFront distribution with Origin Access Control

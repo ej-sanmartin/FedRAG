@@ -72,16 +72,18 @@ resource "aws_cognito_user_pool_client" "main" {
   # Allowed OAuth scopes
   allowed_oauth_scopes = ["email", "openid", "profile"]
   
-  # Callback URLs (will be updated with actual frontend URLs)
+  # Callback URLs (includes CloudFront domain and localhost for development)
   callback_urls = [
     "http://localhost:3000/callback",
-    "https://${var.project_name}-${var.environment}.example.com/callback"
+    "http://localhost:5173/callback",
+    "https://${aws_cloudfront_distribution.web.domain_name}/callback"
   ]
   
   # Logout URLs
   logout_urls = [
     "http://localhost:3000/",
-    "https://${var.project_name}-${var.environment}.example.com/"
+    "http://localhost:5173/",
+    "https://${aws_cloudfront_distribution.web.domain_name}/"
   ]
   
   # Supported identity providers

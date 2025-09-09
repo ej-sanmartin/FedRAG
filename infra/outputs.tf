@@ -111,3 +111,34 @@ output "cognito_hosted_ui_url" {
   description = "The URL for the Cognito Hosted UI"
   value       = "https://${aws_cognito_user_pool_domain.main.domain}.auth.${data.aws_region.current.name}.amazoncognito.com"
 }
+
+# Frontend Hosting Outputs
+output "web_bucket_name" {
+  description = "The name of the S3 web hosting bucket"
+  value       = aws_s3_bucket.web.bucket
+}
+
+output "web_bucket_arn" {
+  description = "The ARN of the S3 web hosting bucket"
+  value       = aws_s3_bucket.web.arn
+}
+
+output "cloudfront_distribution_id" {
+  description = "The ID of the CloudFront distribution"
+  value       = aws_cloudfront_distribution.web.id
+}
+
+output "cloudfront_distribution_arn" {
+  description = "The ARN of the CloudFront distribution"
+  value       = aws_cloudfront_distribution.web.arn
+}
+
+output "web_url" {
+  description = "The URL of the web application"
+  value       = "https://${aws_cloudfront_distribution.web.domain_name}"
+}
+
+output "cloudfront_domain_name" {
+  description = "The domain name of the CloudFront distribution"
+  value       = aws_cloudfront_distribution.web.domain_name
+}
