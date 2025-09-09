@@ -18,6 +18,32 @@ import type { PiiEntity } from "./types.js";
 // Mock the Comprehend client
 const comprehendMock = mockClient(ComprehendClient);
 
+// Helper function to create AWS PII entities for mocking
+const createAwsPiiEntity = (
+  type: string,
+  score: number,
+  beginOffset: number,
+  endOffset: number
+): AwsPiiEntity => ({
+  Type: type as any, // Cast to satisfy AWS SDK type requirements
+  Score: score,
+  BeginOffset: beginOffset,
+  EndOffset: endOffset,
+});
+
+// Helper function to create our custom PII entities for expectations
+const createPiiEntity = (
+  type: string,
+  score: number,
+  beginOffset: number,
+  endOffset: number
+): PiiEntity => ({
+  Type: type,
+  Score: score,
+  BeginOffset: beginOffset,
+  EndOffset: endOffset,
+});
+
 describe("PiiService", () => {
   let piiService: PiiService;
 
@@ -80,17 +106,15 @@ describe("PiiService", () => {
 
     it("should mask single PII entity", async () => {
       const text = "Contact John at john@example.com for details";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 16,
-          EndOffset: 32,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.99, 16, 32),
+      ];
+      const expectedEntities: PiiEntity[] = [
+        createPiiEntity("EMAIL", 0.99, 16, 32),
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -99,28 +123,18 @@ describe("PiiService", () => {
       expect(result.maskedText).toBe(
         "Contact John at <REDACTED:EMAIL> for details"
       );
-      expect(result.entitiesFound).toEqual(mockEntities);
+      expect(result.entitiesFound).toEqual(expectedEntities);
     });
 
     it("should mask multiple non-overlapping PII entities", async () => {
       const text = "Call John at 555-123-4567 or email john@example.com";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "PHONE",
-          Score: 0.95,
-          BeginOffset: 13,
-          EndOffset: 25,
-        },
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 35,
-          EndOffset: 51,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("PHONE", 0.95, 13, 25),
+        createAwsPiiEntity("EMAIL", 0.99, 35, 51),
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -133,29 +147,14 @@ describe("PiiService", () => {
 
     it("should handle overlapping PII entities correctly", async () => {
       const text = "John Smith john.smith@company.com";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "PERSON",
-          Score: 0.9,
-          BeginOffset: 0,
-          EndOffset: 10, // "John Smith"
-        },
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 11,
-          EndOffset: 33, // "john.smith@company.com"
-        },
-        {
-          Type: "PERSON",
-          Score: 0.85,
-          BeginOffset: 11,
-          EndOffset: 21, // "john.smith" (overlaps with email)
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("PERSON", 0.9, 0, 10), // "John Smith"
+        createAwsPiiEntity("EMAIL", 0.99, 11, 33), // "john.smith@company.com"
+        createAwsPiiEntity("PERSON", 0.85, 11, 21), // "john.smith" (overlaps with email)
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -169,23 +168,13 @@ describe("PiiService", () => {
 
     it("should handle completely overlapping entities", async () => {
       const text = "SSN: 123-45-6789";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "SSN",
-          Score: 0.99,
-          BeginOffset: 5,
-          EndOffset: 16,
-        },
-        {
-          Type: "OTHER_PII",
-          Score: 0.8,
-          BeginOffset: 5,
-          EndOffset: 16, // Exact same span
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("SSN", 0.99, 5, 16),
+        createAwsPiiEntity("OTHER_PII", 0.8, 5, 16), // Exact same span
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -195,29 +184,14 @@ describe("PiiService", () => {
 
     it("should handle nested overlapping entities", async () => {
       const text = "Contact: John Doe (john.doe@email.com)";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "PERSON",
-          Score: 0.95,
-          BeginOffset: 9,
-          EndOffset: 17, // "John Doe"
-        },
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 19,
-          EndOffset: 37, // "john.doe@email.com"
-        },
-        {
-          Type: "PERSON",
-          Score: 0.8,
-          BeginOffset: 19,
-          EndOffset: 27, // "john.doe" (nested in email)
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("PERSON", 0.95, 9, 17), // "John Doe"
+        createAwsPiiEntity("EMAIL", 0.99, 19, 37), // "john.doe@email.com"
+        createAwsPiiEntity("PERSON", 0.8, 19, 27), // "john.doe" (nested in email)
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -229,23 +203,13 @@ describe("PiiService", () => {
 
     it("should filter entities by confidence score", async () => {
       const text = "Maybe John at john@test.com";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "PERSON",
-          Score: 0.3, // Below default threshold of 0.5
-          BeginOffset: 6,
-          EndOffset: 10,
-        },
-        {
-          Type: "EMAIL",
-          Score: 0.95, // Above threshold
-          BeginOffset: 14,
-          EndOffset: 27,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("PERSON", 0.3, 6, 10), // Below default threshold of 0.5
+        createAwsPiiEntity("EMAIL", 0.95, 14, 27), // Above threshold
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -258,17 +222,12 @@ describe("PiiService", () => {
     it("should handle custom confidence threshold", async () => {
       const customService = new PiiService({ minConfidenceScore: 0.8 });
       const text = "Contact info: john@test.com";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.75, // Below custom threshold of 0.8
-          BeginOffset: 14,
-          EndOffset: 27,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.75, 14, 27), // Below custom threshold of 0.8
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await customService.redactPII(text);
@@ -282,17 +241,12 @@ describe("PiiService", () => {
         maskingPattern: "[HIDDEN-{TYPE}]",
       });
       const text = "Email: test@example.com";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 7,
-          EndOffset: 23,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.99, 7, 23),
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await customService.redactPII(text);
@@ -302,17 +256,12 @@ describe("PiiService", () => {
 
     it("should handle text with special characters and unicode", async () => {
       const text = "Émile's email: émile@tëst.com 🚀";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.95,
-          BeginOffset: 15,
-          EndOffset: 29,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.95, 15, 29),
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -325,17 +274,12 @@ describe("PiiService", () => {
       const emailStart = 1001; // After 1000 A's and 1 space
       const emailEnd = emailStart + "john@test.com".length; // 13 characters
 
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: emailStart,
-          EndOffset: emailEnd,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.99, emailStart, emailEnd),
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(longText);
@@ -383,17 +327,12 @@ describe("PiiService", () => {
 
     it("should handle entities with invalid offsets", async () => {
       const text = "Short text";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 50, // Invalid offset beyond text length
-          EndOffset: 60,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.99, 50, 60), // Invalid offset beyond text length
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       // Should not crash, but may produce unexpected results
@@ -405,17 +344,12 @@ describe("PiiService", () => {
   describe("Edge Cases", () => {
     it("should handle entities at text boundaries", async () => {
       const text = "john@test.com";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 0,
-          EndOffset: 13, // Entire text
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.99, 0, 13), // Entire text
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -425,23 +359,13 @@ describe("PiiService", () => {
 
     it("should handle adjacent entities", async () => {
       const text = "john@test.com555-1234";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 0,
-          EndOffset: 13,
-        },
-        {
-          Type: "PHONE",
-          Score: 0.95,
-          BeginOffset: 13,
-          EndOffset: 21,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.99, 0, 13),
+        createAwsPiiEntity("PHONE", 0.95, 13, 21),
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -451,17 +375,12 @@ describe("PiiService", () => {
 
     it("should handle zero-length entities", async () => {
       const text = "Normal text";
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "UNKNOWN",
-          Score: 0.99,
-          BeginOffset: 5,
-          EndOffset: 5, // Zero-length entity
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("UNKNOWN", 0.99, 5, 5), // Zero-length entity
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await piiService.redactPII(text);
@@ -493,15 +412,12 @@ describe("PiiService", () => {
         "Multiple entities: " +
         Array.from({ length: 100 }, (_, i) => `user${i}@test.com`).join(" ");
 
-      const mockEntities: PiiEntity[] = Array.from({ length: 100 }, (_, i) => ({
-        Type: "EMAIL",
-        Score: 0.99,
-        BeginOffset: 19 + i * 15, // Approximate positions
-        EndOffset: 19 + i * 15 + 13,
-      }));
+      const mockAwsEntities: AwsPiiEntity[] = Array.from({ length: 100 }, (_, i) =>
+        createAwsPiiEntity("EMAIL", 0.99, 19 + i * 15, 19 + i * 15 + 13)
+      );
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const startTime = Date.now();
@@ -521,17 +437,12 @@ describe("Convenience Functions", () => {
 
   describe("redactPII", () => {
     it("should work as standalone function", async () => {
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 0,
-          EndOffset: 13,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.99, 0, 13),
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const result = await redactPII("test@test.com");
@@ -553,22 +464,20 @@ describe("Convenience Functions", () => {
 
   describe("detectPII", () => {
     it("should return only entities without masking", async () => {
-      const mockEntities: PiiEntity[] = [
-        {
-          Type: "EMAIL",
-          Score: 0.99,
-          BeginOffset: 0,
-          EndOffset: 13,
-        },
+      const mockAwsEntities: AwsPiiEntity[] = [
+        createAwsPiiEntity("EMAIL", 0.99, 0, 13),
+      ];
+      const expectedEntities: PiiEntity[] = [
+        createPiiEntity("EMAIL", 0.99, 0, 13),
       ];
 
       comprehendMock.on(DetectPiiEntitiesCommand).resolves({
-        Entities: mockEntities,
+        Entities: mockAwsEntities,
       });
 
       const entities = await detectPII("test@test.com");
 
-      expect(entities).toEqual(mockEntities);
+      expect(entities).toEqual(expectedEntities);
     });
   });
 });
