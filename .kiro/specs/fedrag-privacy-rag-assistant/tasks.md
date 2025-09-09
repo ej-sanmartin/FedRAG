@@ -75,7 +75,7 @@
   - Add environment variables for KB_ID, MODEL_ARN, GUARDRAIL_ID
   - _Requirements: 5.6, 2.3, 7.1, 7.2, 7.3_
 
-- [ ] 10. Implement Terraform Cognito authentication
+- [x] 10. Implement Terraform Cognito authentication
 
   - Create infra/auth.tf with Cognito user pool configuration
   - Set up app client for OAuth code flow without client secret

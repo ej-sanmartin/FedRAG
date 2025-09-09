@@ -85,3 +85,29 @@ output "lambda_execution_role_arn" {
   description = "The ARN of the Lambda execution role"
   value       = aws_iam_role.lambda_execution_role.arn
 }
+
+# Cognito Authentication Outputs
+output "cognito_user_pool_id" {
+  description = "The ID of the Cognito User Pool"
+  value       = aws_cognito_user_pool.main.id
+}
+
+output "cognito_user_pool_arn" {
+  description = "The ARN of the Cognito User Pool"
+  value       = aws_cognito_user_pool.main.arn
+}
+
+output "cognito_user_pool_client_id" {
+  description = "The ID of the Cognito User Pool Client"
+  value       = aws_cognito_user_pool_client.main.id
+}
+
+output "cognito_user_pool_domain" {
+  description = "The domain name of the Cognito User Pool"
+  value       = aws_cognito_user_pool_domain.main.domain
+}
+
+output "cognito_hosted_ui_url" {
+  description = "The URL for the Cognito Hosted UI"
+  value       = "https://${aws_cognito_user_pool_domain.main.domain}.auth.${data.aws_region.current.name}.amazoncognito.com"
+}

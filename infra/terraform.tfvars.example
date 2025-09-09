@@ -15,10 +15,8 @@ common_tags = {
   CostCenter  = "your-cost-center"
 }
 
-# Cognito Configuration (required for API authentication)
-# These values will be available after deploying the Cognito infrastructure
-cognito_user_pool_id        = "us-east-1_XXXXXXXXX"
-cognito_user_pool_client_id = "your-cognito-client-id"
+# Cognito Configuration is now created by Terraform
+# The user pool ID and client ID will be available as outputs after deployment
 
 # Knowledge Base Configuration (required for API functionality)
 # This value will be available after deploying the Knowledge Base infrastructure

@@ -39,16 +39,8 @@ variable "common_tags" {
   }
 }
 
-# Cognito Configuration Variables
-variable "cognito_user_pool_id" {
-  description = "Cognito User Pool ID for JWT authorization"
-  type        = string
-}
-
-variable "cognito_user_pool_client_id" {
-  description = "Cognito User Pool Client ID for JWT authorization"
-  type        = string
-}
+# Cognito Configuration Variables (now created by Terraform)
+# These are no longer input variables since we create the Cognito resources
 
 # Knowledge Base Configuration Variable
 variable "knowledge_base_id" {
