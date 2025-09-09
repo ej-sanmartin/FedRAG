@@ -14,7 +14,7 @@
   - Create citation and guardrail action type definitions
   - _Requirements: 7.5, 4.4, 3.1_
 
-- [ ] 3. Implement PII detection and masking functionality
+- [x] 3. Implement PII detection and masking functionality
   - Create apps/api/src/pii.ts with Comprehend DetectPiiEntities integration
   - Implement redactPII function with proper offset handling for overlapping spans
   - Add error handling for Comprehend service failures
