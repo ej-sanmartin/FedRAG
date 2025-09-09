@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthContextType, AuthState, User } from '../types/auth';
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from './AuthContext';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -32,7 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isLoading: false,
         });
       } catch (error) {
-        console.error('Error parsing stored user data:', error);
+        // Error parsing stored user data - clear invalid data
         localStorage.removeItem('fedrag_token');
         localStorage.removeItem('fedrag_user');
         setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -44,7 +43,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = () => {
     // TODO: Implement Cognito OAuth redirect
-    console.log('Redirecting to Cognito login...');
     // This will be implemented in task 14
   };
 
@@ -62,8 +60,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleCallback = async (code: string) => {
     // TODO: Implement OAuth code exchange
-    console.log('Handling OAuth callback with code:', code);
     // This will be implemented in task 14
+    // Placeholder to avoid unused parameter warning
+    void code;
   };
 
   const value: AuthContextType = {
@@ -80,10 +79,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+
+

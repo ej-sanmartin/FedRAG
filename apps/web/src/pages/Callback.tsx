@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const Callback: React.FC = () => {
   const navigate = useNavigate();
@@ -12,7 +12,7 @@ const Callback: React.FC = () => {
     const error = searchParams.get('error');
 
     if (error) {
-      console.error('OAuth error:', error);
+      // OAuth error occurred - redirect to login
       navigate('/login');
       return;
     }
@@ -22,8 +22,8 @@ const Callback: React.FC = () => {
         .then(() => {
           navigate('/');
         })
-        .catch((error) => {
-          console.error('Callback handling error:', error);
+        .catch(() => {
+          // Callback handling error - redirect to login
           navigate('/login');
         });
     } else {
