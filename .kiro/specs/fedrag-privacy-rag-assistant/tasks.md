@@ -141,7 +141,7 @@
   - Add guardrail intervention banner display
   - _Requirements: 1.3, 1.5, 6.4, 6.5_
 
-- [ ] 18. Set up frontend build and development configuration
+- [x] 18. Set up frontend build and development configuration
 
   - Configure apps/web/vite.config.ts with proper proxy settings
   - Set up environment variable handling with VITE\_ prefix

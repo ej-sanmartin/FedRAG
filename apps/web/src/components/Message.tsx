@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { Citation } from '../lib/api/client';
 
 // Message types for chat history
-export interface Message {
+export interface ChatMessage {
   id: string;
   type: 'user' | 'assistant' | 'error';
   content: string;
@@ -13,7 +13,7 @@ export interface Message {
 }
 
 interface MessageProps {
-  message: Message;
+  message: ChatMessage;
 }
 
 const Message: React.FC<MessageProps> = ({ message }) => {

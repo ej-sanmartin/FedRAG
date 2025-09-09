@@ -35,6 +35,19 @@ module.exports = {
           { allowConstantExport: true }
         ]
       }
+    },
+    {
+      // Allow console statements in development and configuration files
+      files: [
+        'src/lib/debug.ts',
+        'src/lib/config.ts',
+        'src/main.tsx',
+        'vite.config.ts',
+        '*.config.{js,ts}'
+      ],
+      rules: {
+        'no-console': 'off'
+      }
     }
   ]
 }

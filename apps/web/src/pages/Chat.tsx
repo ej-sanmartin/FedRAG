@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Layout from '../components/Layout';
-import Message, { type Message as MessageType } from '../components/Message';
+import Message, { type ChatMessage as MessageType } from '../components/Message';
 import Citations from '../components/Citations';
 import { chatQuery, handleApiError, type ChatResponse } from '../lib/api/client';
 
