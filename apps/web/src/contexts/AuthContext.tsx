@@ -1,0 +1,89 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import type { AuthContextType, AuthState, User } from '../types/auth';
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    user: null,
+    token: null,
+    isLoading: true,
+  });
+
+  // Check for existing token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('fedrag_token');
+    const userStr = localStorage.getItem('fedrag_user');
+    
+    if (token && userStr) {
+      try {
+        const user: User = JSON.parse(userStr);
+        // TODO: Validate token expiration
+        setAuthState({
+          isAuthenticated: true,
+          user,
+          token,
+          isLoading: false,
+        });
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        localStorage.removeItem('fedrag_token');
+        localStorage.removeItem('fedrag_user');
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+      }
+    } else {
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, []);
+
+  const login = () => {
+    // TODO: Implement Cognito OAuth redirect
+    console.log('Redirecting to Cognito login...');
+    // This will be implemented in task 14
+  };
+
+  const logout = () => {
+    localStorage.removeItem('fedrag_token');
+    localStorage.removeItem('fedrag_user');
+    setAuthState({
+      isAuthenticated: false,
+      user: null,
+      token: null,
+      isLoading: false,
+    });
+    // TODO: Redirect to Cognito logout URL
+  };
+
+  const handleCallback = async (code: string) => {
+    // TODO: Implement OAuth code exchange
+    console.log('Handling OAuth callback with code:', code);
+    // This will be implemented in task 14
+  };
+
+  const value: AuthContextType = {
+    ...authState,
+    login,
+    logout,
+    handleCallback,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
