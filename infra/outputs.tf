@@ -142,3 +142,34 @@ output "cloudfront_domain_name" {
   description = "The domain name of the CloudFront distribution"
   value       = aws_cloudfront_distribution.web.domain_name
 }
+
+# Logging and Monitoring Outputs
+output "sns_alerts_topic_arn" {
+  description = "The ARN of the general alerts SNS topic"
+  value       = aws_sns_topic.alerts.arn
+}
+
+output "sns_security_alerts_topic_arn" {
+  description = "The ARN of the security alerts SNS topic"
+  value       = aws_sns_topic.security_alerts.arn
+}
+
+output "sns_cost_alerts_topic_arn" {
+  description = "The ARN of the cost alerts SNS topic"
+  value       = aws_sns_topic.cost_alerts.arn
+}
+
+output "cloudwatch_dashboard_url" {
+  description = "The URL of the CloudWatch dashboard"
+  value       = "https://${data.aws_region.current.name}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.name}#dashboards:name=${aws_cloudwatch_dashboard.main.dashboard_name}"
+}
+
+output "project_budget_name" {
+  description = "The name of the project budget"
+  value       = aws_budgets_budget.project_budget.name
+}
+
+output "bedrock_budget_name" {
+  description = "The name of the Bedrock-specific budget"
+  value       = aws_budgets_budget.bedrock_budget.name
+}

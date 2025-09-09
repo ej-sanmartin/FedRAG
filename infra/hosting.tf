@@ -61,7 +61,7 @@ resource "aws_cloudfront_origin_access_control" "web" {
 resource "aws_cloudfront_cache_policy" "spa_cache_policy" {
   name        = "${var.project_name}-spa-cache-policy"
   comment     = "Cache policy optimized for Single Page Applications"
-  default_ttl = 86400   # 1 day
+  default_ttl = 86400    # 1 day
   max_ttl     = 31536000 # 1 year
   min_ttl     = 0
 

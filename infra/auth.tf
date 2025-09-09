@@ -64,46 +64,46 @@ resource "aws_cognito_user_pool_client" "main" {
 
   # OAuth configuration for code flow without client secret
   generate_secret = false
-  
+
   # Allowed OAuth flows
-  allowed_oauth_flows = ["code"]
+  allowed_oauth_flows                  = ["code"]
   allowed_oauth_flows_user_pool_client = true
-  
+
   # Allowed OAuth scopes
   allowed_oauth_scopes = ["email", "openid", "profile"]
-  
+
   # Callback URLs (includes CloudFront domain and localhost for development)
   callback_urls = [
     "http://localhost:3000/callback",
     "http://localhost:5173/callback",
     "https://${aws_cloudfront_distribution.web.domain_name}/callback"
   ]
-  
+
   # Logout URLs
   logout_urls = [
     "http://localhost:3000/",
     "http://localhost:5173/",
     "https://${aws_cloudfront_distribution.web.domain_name}/"
   ]
-  
+
   # Supported identity providers
   supported_identity_providers = ["COGNITO"]
-  
+
   # Token validity periods
-  access_token_validity  = 60    # 1 hour
-  id_token_validity      = 60    # 1 hour
-  refresh_token_validity = 30    # 30 days
-  
+  access_token_validity  = 60 # 1 hour
+  id_token_validity      = 60 # 1 hour
+  refresh_token_validity = 30 # 30 days
+
   # Token validity units
   token_validity_units {
     access_token  = "minutes"
     id_token      = "minutes"
     refresh_token = "days"
   }
-  
+
   # Prevent user existence errors
   prevent_user_existence_errors = "ENABLED"
-  
+
   # Enable SRP authentication
   explicit_auth_flows = [
     "ALLOW_USER_SRP_AUTH",

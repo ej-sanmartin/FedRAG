@@ -91,7 +91,7 @@
   - Add outputs for web URL and CloudFront distribution
   - _Requirements: 5.8, 10.1, 10.2, 10.3, 10.5_
 
-- [ ] 12. Create Terraform logging and monitoring
+- [x] 12. Create Terraform logging and monitoring
 
   - Implement infra/logging.tf with CloudWatch log groups
   - Set up log retention policies and structured logging configuration
