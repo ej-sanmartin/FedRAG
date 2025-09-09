@@ -1,13 +1,13 @@
 # Implementation Plan
 
-- [ ] 1. Set up project structure and core configuration
+- [x] 1. Set up project structure and core configuration
   - Create monorepo structure with apps/web, apps/api, infra directories
   - Configure pnpm workspaces with shared dependencies
   - Set up TypeScript configurations for both frontend and backend
   - Create environment variable templates and configuration files
   - _Requirements: 5.1, 6.1, 7.1, 9.3_
 
-- [ ] 2. Implement core TypeScript types and interfaces
+- [x] 2. Implement core TypeScript types and interfaces
   - Define shared types for API requests/responses in apps/api/src/types.ts
   - Create Bedrock Knowledge Base configuration interfaces
   - Define PII entity and masking result types
