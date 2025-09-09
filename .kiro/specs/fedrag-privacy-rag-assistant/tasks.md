@@ -50,7 +50,7 @@
   - Create deployment scripts for Lambda zip creation
   - _Requirements: 7.1, 8.4, 9.4_
 
-- [ ] 7. Implement Terraform infrastructure for Knowledge Base
+- [x] 7. Implement Terraform infrastructure for Knowledge Base
 
   - Create infra/kb.tf with S3 corpus bucket configuration
   - Implement OpenSearch Serverless VECTOR collection using aws-ia module

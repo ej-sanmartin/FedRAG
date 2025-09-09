@@ -1,0 +1,16 @@
+# Example Terraform Variables Configuration
+# Copy this file to terraform.tfvars and customize as needed
+
+# Project configuration
+project_name = "fedrag"
+environment  = "dev"
+aws_region   = "us-east-1"
+
+# Common tags (optional - defaults are provided)
+common_tags = {
+  Project     = "FedRag"
+  ManagedBy   = "Terraform"
+  Application = "Privacy-First RAG Assistant"
+  Owner       = "your-team-name"
+  CostCenter  = "your-cost-center"
+}
