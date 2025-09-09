@@ -33,7 +33,7 @@
   - Write unit tests for knowledge base calls and guardrail behavior simulation
   - _Requirements: 4.1, 4.2, 4.4, 4.5, 8.2, 8.3_
 
-- [ ] 5. Create Lambda handler with request orchestration
+- [x] 5. Create Lambda handler with request orchestration
 
   - Implement apps/api/src/index.ts main handler function
   - Orchestrate pre-PII → askKb → post-PII processing flow
