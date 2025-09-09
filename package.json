@@ -1,0 +1,24 @@
+{
+  "name": "fedrag-privacy-rag-assistant",
+  "version": "1.0.0",
+  "description": "Privacy-first RAG assistant built on AWS infrastructure",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --parallel --recursive dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "type-check": "pnpm --recursive type-check"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
