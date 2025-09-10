@@ -99,5 +99,8 @@ temp/
 .terraform/
 .terraform.lock.hcl
 
+# Terraform secrets
+infra/*.tfvars
+
 # AWS
 .aws/
