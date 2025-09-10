@@ -16,7 +16,12 @@
     "type-check:watch": "tsc --noEmit --watch",
     "clean": "rm -rf dist node_modules/.vite",
     "check-env": "node -e \"console.log('Environment check passed')\"",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run src/tests/e2e-integration.test.ts",
+    "test:e2e:watch": "vitest src/tests/e2e-integration.test.ts",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -41,6 +46,12 @@
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/user-event": "^14.5.1",
+    "@vitest/coverage-v8": "^1.0.0",
+    "jsdom": "^23.0.1",
+    "vitest": "^1.0.0"
   }
 }

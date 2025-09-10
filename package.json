@@ -10,6 +10,9 @@
     "dev": "pnpm --parallel --recursive dev",
     "build": "pnpm --recursive build",
     "test": "pnpm --recursive test",
+    "test:e2e": "pnpm --filter @fedrag/api run test:e2e && pnpm --filter @fedrag/web run test:e2e",
+    "test:e2e:full": "pnpm --filter @fedrag/api run test:e2e:full",
+    "validate:deployment": "./scripts/validate-e2e-deployment.sh",
     "lint": "pnpm --recursive lint",
     "type-check": "pnpm --recursive type-check"
   },
