@@ -282,8 +282,7 @@ resource "aws_iam_role" "bedrock_kb_execution_role" {
 
 # Bedrock Knowledge Base
 # Note: These resources require AWS provider version with Bedrock support
-# Uncomment when Bedrock Knowledge Base resources are available in the provider
-/*
+# Bedrock Knowledge Base resources
 resource "aws_bedrock_knowledge_base" "main" {
   name     = "${var.project_name}-knowledge-base"
   role_arn = aws_iam_role.bedrock_kb_role.arn
@@ -356,7 +355,6 @@ resource "aws_bedrock_knowledge_base_data_source" "main" {
     aws_s3_bucket.corpus
   ]
 }
-*/
 
 # Data sources for current AWS account and region
 data "aws_caller_identity" "current" {}
