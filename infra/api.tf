@@ -124,7 +124,6 @@ resource "aws_lambda_function" "api" {
       MODEL_ARN         = "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0"
       GUARDRAIL_ID      = aws_bedrock_guardrail.main.guardrail_id
       GUARDRAIL_VERSION = aws_bedrock_guardrail_version.main.version
-      AWS_REGION        = data.aws_region.current.name
     }
   }
 
@@ -244,7 +243,6 @@ resource "aws_apigatewayv2_stage" "main" {
       status           = "$context.status"
       protocol         = "$context.protocol"
       responseLength   = "$context.responseLength"
-      responseTime     = "$context.responseTime"
       authorizerError  = "$context.authorizer.error"
       integrationError = "$context.integration.error"
     })
