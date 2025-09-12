@@ -64,6 +64,8 @@ resource "aws_cloudwatch_log_metric_filter" "lambda_errors" {
     value         = "1"
     default_value = "0"
   }
+
+  depends_on = [aws_cloudwatch_log_group.lambda_logs]
 }
 
 resource "aws_cloudwatch_log_metric_filter" "pii_detections" {
@@ -103,6 +105,8 @@ resource "aws_cloudwatch_log_metric_filter" "bedrock_errors" {
     value         = "1"
     default_value = "0"
   }
+
+  depends_on = [aws_cloudwatch_log_group.lambda_logs]
 }
 
 resource "aws_cloudwatch_log_metric_filter" "comprehend_errors" {
