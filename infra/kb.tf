@@ -283,6 +283,7 @@ resource "aws_iam_role" "bedrock_kb_execution_role" {
 # Bedrock Knowledge Base
 # Note: These resources require AWS provider version with Bedrock support
 # Bedrock Knowledge Base resources
+# Note: Requires AWS provider version 5.31.0 or later
 resource "aws_bedrock_knowledge_base" "main" {
   name     = "${var.project_name}-knowledge-base"
   role_arn = aws_iam_role.bedrock_kb_role.arn
