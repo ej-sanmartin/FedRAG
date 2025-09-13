@@ -283,79 +283,21 @@ resource "aws_iam_role" "bedrock_kb_execution_role" {
 # Bedrock Knowledge Base
 # Note: These resources require AWS provider version with Bedrock support
 # Bedrock Knowledge Base resources
-# Note: Requires AWS provider version 5.31.0 or later
-resource "aws_bedrock_knowledge_base" "main" {
-  name     = "${var.project_name}-knowledge-base"
-  role_arn = aws_iam_role.bedrock_kb_role.arn
-
-  description = "FedRag Privacy-First RAG Assistant Knowledge Base"
-
-  knowledge_base_configuration {
-    vector_knowledge_base_configuration {
-      embedding_model_arn = "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/amazon.titan-embed-text-v2:0"
-    }
-    type = "VECTOR"
-  }
-
-  storage_configuration {
-    opensearch_serverless_configuration {
-      collection_arn    = aws_opensearchserverless_collection.main.arn
-      vector_index_name = "fedrag-vector-index"
-      field_mapping {
-        vector_field   = "vector"
-        text_field     = "text"
-        metadata_field = "metadata"
-      }
-    }
-    type = "OPENSEARCH_SERVERLESS"
-  }
-
-  tags = {
-    Name        = "${var.project_name}-knowledge-base"
-    Environment = var.environment
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.bedrock_kb_s3,
-    aws_iam_role_policy_attachment.bedrock_kb_opensearch,
-    aws_iam_role_policy_attachment.bedrock_kb_model,
-    aws_opensearchserverless_collection.main
-  ]
-}
-
-# Bedrock Knowledge Base Data Source
-resource "aws_bedrock_knowledge_base_data_source" "main" {
-  knowledge_base_id = aws_bedrock_knowledge_base.main.id
-  name              = "${var.project_name}-s3-data-source"
-
-  description = "S3 data source for FedRag knowledge base corpus"
-
-  data_source_configuration {
-    s3_configuration {
-      bucket_arn = aws_s3_bucket.corpus.arn
-
-      # Optional: specify inclusion prefixes if needed
-      # inclusion_prefixes = ["documents/"]
-    }
-    type = "S3"
-  }
-
-  # Optional: Configure chunking strategy
-  vector_ingestion_configuration {
-    chunking_configuration {
-      chunking_strategy = "FIXED_SIZE"
-      fixed_size_chunking_configuration {
-        max_tokens         = 300
-        overlap_percentage = 20
-      }
-    }
-  }
-
-  depends_on = [
-    aws_bedrock_knowledge_base.main,
-    aws_s3_bucket.corpus
-  ]
-}
+# Note: These resources are not supported in AWS provider < 5.31.0
+# Knowledge Base created manually via AWS CLI
+# 
+# Uncomment these when using AWS provider 5.31.0+:
+#
+# resource "aws_bedrock_knowledge_base" "main" {
+#   name     = "${var.project_name}-knowledge-base"
+#   role_arn = aws_iam_role.bedrock_kb_role.arn
+#   ...
+# }
+#
+# resource "aws_bedrock_knowledge_base_data_source" "main" {
+#   knowledge_base_id = aws_bedrock_knowledge_base.main.id
+#   ...
+# }
 
 # Data sources for current AWS account and region
 data "aws_caller_identity" "current" {}
