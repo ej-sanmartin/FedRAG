@@ -55,7 +55,7 @@ resource "aws_cognito_user_pool" "main" {
   schema {
     attribute_data_type = "String"
     name                = "name"
-    required            = false
+    required            = true
     mutable             = true
 
     string_attribute_constraints {
@@ -86,6 +86,12 @@ resource "aws_cognito_user_pool_client" "main" {
 
   # Allowed OAuth scopes
   allowed_oauth_scopes = ["email", "openid", "profile"]
+
+  # Writable attributes (allows users to update these during signup/profile editing)
+  write_attributes = ["email", "name"]
+
+  # Readable attributes
+  read_attributes = ["email", "name"]
 
   # Callback URLs (includes CloudFront domain and localhost for development)
   callback_urls = [
