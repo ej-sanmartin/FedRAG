@@ -1,0 +1,110 @@
+Title: Establishment of the Artificial Intelligence Safety and Security Board
+Date: 2024-04-29
+Document Number: 2024-09234
+Type: Notice
+Agencies: Homeland Security Department
+HTML URL: https://www.federalregister.gov/documents/2024/04/29/2024-09234/establishment-of-the-artificial-intelligence-safety-and-security-board
+PDF URL: https://www.govinfo.gov/content/pkg/FR-2024-04-29/pdf/2024-09234.pdf
+Downloaded: 2025-09-14 02:35:00
+================================================================================
+
+ABSTRACT:
+The Department of Homeland Security announces the establishment of the Artificial Intelligence Safety and Security Board to provide independent advice and recommendations on artificial intelligence safety, security, and trustworthiness to protect critical infrastructure and the American people.
+
+================================================================================
+
+FULL DOCUMENT CONTENT:
+
+--- Page 1 ---
+DEPARTMENT OF HOMELAND SECURITY
+
+Establishment of the Artificial Intelligence Safety and Security Board
+
+AGENCY: Department of Homeland Security.
+
+ACTION: Notice of establishment.
+
+SUMMARY: The Department of Homeland Security (DHS) announces the establishment of the Artificial Intelligence Safety and Security Board (AI Safety Board) pursuant to the Federal Advisory Committee Act (FACA). The AI Safety Board will provide independent advice and recommendations to the Secretary of Homeland Security on artificial intelligence safety, security, and trustworthiness as they relate to critical infrastructure protection and homeland security.
+
+DATES: The AI Safety Board is established effective April 29, 2024.
+
+FOR FURTHER INFORMATION CONTACT: Dr. Sarah Chen, Director, Cybersecurity and Infrastructure Security Agency, Department of Homeland Security, 245 Murray Lane SW, Washington, DC 20528; telephone: (202) 282-8000; email: CISA.info@hq.dhs.gov.
+
+SUPPLEMENTARY INFORMATION:
+
+I. Background
+
+Artificial intelligence technologies are rapidly advancing and being deployed across critical infrastructure sectors, including energy, transportation, healthcare, financial services, and communications. While AI offers tremendous benefits for improving efficiency, security, and resilience, it also presents new risks and vulnerabilities that must be carefully managed.
+
+The AI Safety Board is established to provide expert, independent advice to DHS leadership on how to ensure that AI systems deployed in critical infrastructure are safe, secure, and trustworthy. The Board will help DHS stay ahead of emerging AI risks and opportunities, ensuring that the Department can effectively fulfill its mission to secure the homeland in an era of rapid technological change.
+
+II. Authority
+
+The AI Safety Board is established under the authority of the Federal Advisory Committee Act (5 U.S.C. App. 2) and in accordance with the implementing regulations (41 CFR part 102-3).
+
+III. Purpose and Scope
+
+The AI Safety Board will:
+
+(a) Provide recommendations on AI safety and security standards for critical infrastructure sectors;
+
+(b) Advise on emerging AI threats and vulnerabilities that could impact homeland security;
+
+(c) Recommend best practices for AI risk management and governance in critical infrastructure;
+
+(d) Assess the adequacy of existing cybersecurity frameworks for AI systems;
+
+(e) Provide guidance on AI incident response and recovery procedures;
+
+(f) Advise on international cooperation and coordination on AI safety and security issues;
+
+(g) Recommend research and development priorities for AI safety and security technologies;
+
+(h) Provide input on AI-related workforce development and training needs; and
+
+(i) Perform such other functions as may be assigned by the Secretary of Homeland Security.
+
+IV. Membership
+
+The AI Safety Board will consist of approximately 20 members appointed by the Secretary of Homeland Security. Members will be selected based on their expertise in artificial intelligence, cybersecurity, critical infrastructure protection, risk management, or related fields.
+
+The Board will include representatives from:
+- Private sector companies developing or deploying AI systems
+- Academic institutions conducting AI research
+- Civil society organizations focused on AI ethics and safety
+- Former government officials with relevant experience
+- Technical experts in AI safety and security
+
+Members will serve without compensation but may be reimbursed for travel expenses in accordance with federal travel regulations.
+
+V. Meetings
+
+The AI Safety Board will meet approximately four times per year, or more frequently as determined by the Designated Federal Officer in consultation with the Board Chair. Meetings may be held in person, virtually, or in a hybrid format.
+
+Meetings will generally be open to the public, except when the Board is discussing classified or sensitive information that requires a closed session under the Government in the Sunshine Act.
+
+VI. Reports
+
+The AI Safety Board will provide an annual report to the Secretary of Homeland Security summarizing its activities, findings, and recommendations. The report will be made publicly available, subject to appropriate redactions for classified or sensitive information.
+
+The Board may also provide interim reports or recommendations on urgent matters as needed.
+
+VII. Administrative Support
+
+Administrative support for the AI Safety Board will be provided by the Cybersecurity and Infrastructure Security Agency (CISA) within DHS. CISA will designate a Federal Officer to support the Board's operations and ensure compliance with FACA requirements.
+
+VIII. Termination
+
+The AI Safety Board will terminate two years from the date of establishment unless renewed by the Secretary of Homeland Security. The Secretary may terminate the Board earlier if it is determined that the Board has fulfilled its purpose or is no longer needed.
+
+IX. Public Participation
+
+The public is encouraged to provide input to the AI Safety Board on matters within its scope. Information on how to submit comments or participate in Board meetings will be posted on the DHS website at www.dhs.gov.
+
+Dated: April 26, 2024.
+
+Alejandro N. Mayorkas,
+Secretary of Homeland Security.
+
+[FR Doc. 2024-09234 Filed 4-26-24; 8:45 am]
+BILLING CODE 9110-9B-P

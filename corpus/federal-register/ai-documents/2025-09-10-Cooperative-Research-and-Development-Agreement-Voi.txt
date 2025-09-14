@@ -1,0 +1,297 @@
+Title: Cooperative Research and Development Agreement: “VoiceBrain”
+Date: 2025-09-10
+Document Number: 2025-17361
+Type: Notice
+Agencies: Homeland Security Department, Coast Guard
+HTML URL: https://www.federalregister.govhttps://www.federalregister.gov/documents/2025/09/10/2025-17361/cooperative-research-and-development-agreement-voicebrain
+PDF URL: https://www.govinfo.gov/content/pkg/FR-2025-09-10/pdf/2025-17361.pdf
+Downloaded: 2025-09-14 03:12:35
+================================================================================
+
+ABSTRACT:
+The Coast Guard is announcing its intent to enter into a Cooperative Research and Development Agreement (CRADA) with VoiceBrain to determine the efficacy of artificial intelligence multicast overlays into operational communication platforms currently in use by the Coast Guard. While the Coast Guard is currently considering partnering with VoiceBrain, we are soliciting public comment on the possible nature of and participation of other parties in the proposed CRADA. In addition, the Coast Guard also invites other potential Federal participants, who have the interest and capability to bring similar contributions to this type of research, to consider submitting proposals for consideration in similar CRADAs.
+
+================================================================================
+
+FULL DOCUMENT CONTENT:
+
+--- Page 1 ---
+Federal Register/Vol. 90, No. 173/Wednesday, September 10, 2025/Notices 43619
+E–262–2005–0–IT–27 and E–262–2005– field of use may be limited to the that the grant of the license would not
+0–IT–40 and E–262–2005–0–IT–50 and following: be consistent with the requirements of
+E–262–2005–0–IT–59); ‘‘Use of the anti-mesothelin 35 U.S.C. 209 and 37 CFR part 404.
+Æ Austria (HHS Reference E–262– immunotoxins LMB–100 or SS1P for the Complete applications for a license
+2005–0–AT–33 and E–262–2005–0–AT– treatment of mesothelin-expressing that are timely filed in response to this
+43); cancers.’’ notice will be treated as objections to
+Æ Belgium (HHS Reference E–262– Recent efforts have been directed to the grant of the contemplated exclusive
+2005–0–BE–34 and E–262–2005–0–BE– developing more specific cancer patent license. In response to this
+44); treatments in order to more effectively Notice, the public may file comments or
+Æ Ireland (HHS Reference E–262– treat cancer with fewer side effects. objections. Comments and objections,
+2005–0–IE–39 and E–262–2005–0–IE–49 These efforts include the development other than those in the form of a license
+and E–262–2005–0–IE–58); of antibody-based therapeutics such as application, will not be treated
+Æ Netherlands (HHS Reference E– unconjugated antibodies, antibody drug confidentially, and may be made
+262–2005–0–NL–41 and E–262–2005– conjugates (ADCs), bispecific publicly available.
+0–NL–51); and antibodies, chimeric antigen receptors License applications submitted in
+Æ Poland (HHS Reference E–262– (CARs), and recombinant immunotoxins response to this Notice will be
+2005–0–PL–42 and E–262–2005–0–PL– (RITs). This technology concerns the presumed to contain business
+52 and E–262–2005–0–PL–60); development of RITs, specifically the confidential information and any release
+• United States Patent 8,907,060 SS1P or LMB–100 immunotoxins. These of information in these license
+(HHS Reference E–262–2005–0–US–06), immunotoxins comprise a targeting applications will be made only as
+issued 12/9/2014; domain and a toxin domain, where the required and upon a request under the
+• European Patent 2311854 (HHS targeting domain comprises the CDR Freedom of Information Act, 5 U.S.C.
+Reference E–262–2005–0–EP–07), sequences of the anti-mesothelin 552.
+issued 4/17/2013; antibody known as SS1 (this antibody is
+• European Patent 2332970 (HHS not patented), and the toxin domain Dated: September 8, 2025.
+Reference E–262–2005–0–EP–08), comprises a Pseudomonas exotoxin A Richard U. Rodriguez,
+issued 12/23/2015; (PE) variant that contains deletions and Associate Director, Technology Transfer
+• Australian Patent 2012216642 (HHS mutations to the native PE sequence Center, National Cancer Institute.
+Reference E–262–2005–0–AU–15), which reduces its immunogenicity [FR Doc. 2025–17379 Filed 9–9–25; 8:45 am]
+issued 9/25/2014; when administered to patients. The BILLING CODE 4140–01–P
+• Australian Patent 2014208269 (HHS targeting domain serves the purpose of
+Reference E–262–2005–0–AU–22), directing the immunotoxins to only
+issued 6/16/2016; those cells which express a protein DEPARTMENT OF HOMELAND
+• European Patent 3006456 (HHS known as mesothelin, which is
+SECURITY
+Reference E–262–2005–0–EP–28), expressed on the surface of certain types
+issued 9/19/2018; of cancer cells (e.g., mesothelioma, Coast Guard
+• European Patent 3006457 (HHS ovarian cancer, pancreatic cancer, etc.),
+Reference E–262–2005–0–EP–29), allowing healthy, essential cells to [Docket Number USCG–2025–0292]
+issued 11/22/2017; remain unaffected while tumor cells are
+• European Patent 3006458 (HHS killed. Cooperative Research and
+Reference E–262–2005–0–EP–30), All the Intellectual Property listed Development Agreement: ‘‘VoiceBrain’’
+issued 11/22/2017; above is directed to the toxin domain of AGENCY: Coast Guard, DHS.
+• Australian Patent 2016202754 (HHS SS1P and LMB–100 (i.e. PE variants that
+Reference E–262–2005–0–AU–31), contain deletions and mutations to the ACTION: Notice of intent; request for
+issued 10/5/2017; and native PE sequence which reduces its comments.
+• Canadian Patent 2,941,466 (HHS immunogenicity when administered to SUMMARY: The Coast Guard is
+Reference E–262–2005–0–CA–32), patients). The scope of exclusivity for
+announcing its intent to enter into a
+issued 12/3/2019; this license will be limited to the
+Cooperative Research and Development
+specific use of the LMB–100 or SS1P
+(7) E–231–2017–0 Technology Entitled Agreement (CRADA) with VoiceBrain to
+anti-mesothelin immunotoxins for the
+‘‘Immunotoxins With Albumin Binding determine the efficacy of artificial
+treatment of mesothelin-expressing
+Domain’’ cancers. Other fields of use will still be intelligence multicast overlays into
+operational communication platforms
+• U.S. Provisional Patent Application available if this license is granted,
+currently in use by the Coast Guard.
+62/559,926 (HHS Reference E–231– including use of other mesothelin-
+While the Coast Guard is currently
+2017–0–US–01), filed 9/18/2017; targeted immunotoxins using other anti-
+• PCT Application PCT/US2018/ mesothelin antibodies in conjunction considering partnering with VoiceBrain,
+we are soliciting public comment on the
+051418 (HHS Reference E–231–2017–0– with the Intellectual Property, as well as
+possible nature of and participation of
+PCT–02), filed 9/18/2018; the use of the antibodies directed to
+• United States Patent 18/471,137 other targets in conjunction with the other parties in the proposed CRADA. In
+addition, the Coast Guard also invites
+(HHS Reference E–269–2009–0–US–02), Intellectual Property.
+other potential Federal participants,
+issued 2/4/2025; and This Notice is made in accordance
+• United States Patent 16/648,369 with 35 U.S.C. 209 and 37 CFR part 404. who have the interest and capability to
+1SECITON (HHS Reference E–269–2009–0–US–03), The prospective exclusive license will bring similar contributions to this type
+of research, to consider submitting
+issued 10/24/2023; be royalty bearing, and the prospective
+proposals for consideration in similar
+The patent rights in these inventions exclusive license may be granted unless
+htiw CRADAs.
+have been assigned to the Government within fifteen (15) days from the date of
+DORP32NQX11KSD
+of the United States of America. this published notice, the National DATES: Your comments and related
+The prospective exclusive license Cancer Institute receives written material must reach the Coast Guard on
+territory may be worldwide and the evidence and argument that establishes or before October 10, 2025.
+no
+rettol
+VerDate Sep<11>2014 17:08 Sep 09, 2025 Jkt 265001 PO 00000 Frm 00037 Fmt 4703 Sfmt 4703 E:\FR\FM\10SEN1.SGM 10SEN1
+
+--- Page 2 ---
+43620 Federal Register/Vol. 90, No. 173/Wednesday, September 10, 2025/Notices
+ADDRESSES: You may submit comments inquiry as being available in the docket, accordance with the agreed upon test
+identified by docket number USCG– find the docket as described in the plan;
+2025–0292 using the Federal portal at previous paragraph, and then select 5. Work with non-Federal participant
+https://www.regulations.gov. See the ‘‘Supporting & Related Material’’ in the to develop a Final Report, which will
+‘‘Public Participation and Request for Document Type column. Public document the methodologies, findings,
+Comments’’ portion of the comments will also be placed in our conclusions, and recommendations of
+SUPPLEMENTARYINFORMATIONsection for online docket and can be viewed by this CRADA work.
+further instructions on submitting following instructions on the https:// We anticipate that the non-Federal
+comments. www.regulations.gov Frequently Asked participants’ contributions under the
+Questions web page. proposed CRADA will include the
+FORFURTHERINFORMATIONCONTACT: If
+We accept anonymous comments. following:
+you have questions about this notice of
+Comments we post to https:// 1. Provide appropriate staff with
+intent, call or email Lieutenant Alex
+www.regulations.gov will include any pertinent expertise to support the above-
+Benhart, U.S. Coast Guard Research and
+personal information you have mentioned tasks;
+Development Center; telephone 860–
+provided. For more about privacy and 2. Provide all necessary resources to
+271–2600, email RDC-info@uscg.mil.
+submissions in response to this incorporate VoiceBrain into the Coast
+SUPPLEMENTARYINFORMATION: document, see DHS’s eRulemaking Guard infrastructure;
+I. Table of Abbreviations System of Records notice (85 FR 14226, 3. Provide technical approach for the
+March 11, 2020). system evaluation;
+DHS Department of Homeland Security 4. Work with the Federal participant
+U.S.C. United States Code IV. Discussion to develop a Final Report, which will
+II. Background and Purpose CRADAs are authorized under 15 document the methodologies, findings,
+U.S.C. 3710a.1A CRADA promotes the conclusions, and recommendations of
+The Coast Guard currently leverages a
+transfer of technology to the private this CRADA work.
+variety of communication capturing sector for commercial use, as well as The Coast Guard reserves the right to
+methodologies in operational specified research or development select for CRADA participants all, some,
+communication platforms to provide efforts that are consistent with the or no proposals submitted for this
+accurate maritime response capabilities. mission of the Federal parties to the CRADA. The Coast Guard will provide
+The incorporation of VoiceBrain within CRADA. The Federal party or parties no funding for reimbursement of
+the maritime response communication agree with one or more non-Federal proposal development costs. Proposals
+ecosystem is expected to identify and parties to share research resources, but and any other material submitted in
+automate notifications for the safety of the Federal party does not contribute response to this notice will not be
+the local mariners and assets. funding. returned. Proposals submitted are
+Additionally, VoiceBrain’s integration CRADAs are not procurement expected to be unclassified and consist
+into existing and future multicast contracts. Care is taken to ensure that of no more than five single-sided pages
+communication systems provides an CRADAs are not used to circumvent the (excluding cover page, DD 1494, JF–12).
+opportunity to streamline and enhance contracting process. CRADAs have a The Coast Guard will select proposals at
+the process of maritime response by specific purpose and should not be its sole discretion on the basis of:
+eliminating human error and fatigue. confused with procurement contracts, 1. How well they communicate an
+III. Public Participation and Request for grants, and other types of agreements. understanding, of and ability to meet,
+Under the proposed CRADA, the R&D the proposed CRADA’s goal; and
+Comments
+Center will collaborate with one non- 2. How well they address the
+We request public comments on this Federal participant. Together, the R&D following criteria:
+notice. Although we do not plan to Center and the non-Federal participant a. Technical capability to support the
+respond to comments in the Federal will conduct testing, development, and non-Federal party contributions
+Register, we will respond directly to evaluation of artificial intelligence data described, and
+commenters and may modify our analytics within multicast operational b. Resources available for supporting
+proposal in light of comments. communication platforms used by the the non-Federal party contributions
+We encourage you to submit Coast Guard. described.
+comments in response to this notice of We anticipate that the Coast Guard’s Currently, the Coast Guard is
+inquiry through the Federal Docket contributions under the proposed considering VoiceBrain for participation
+Management System at https:// CRADA will include the following: in this CRADA. This consideration is
+www.regulations.gov. To do so, go to 1. Provide appropriate staff with based on the fact that VoiceBrain has
+https://www.regulations.gov, type pertinent expertise to take the lead in demonstrated its technical ability and
+USCG–2025–0292 in the search box and accomplishing the required tasks; availability of appropriate expertise to
+click ‘‘Search.’’ Next, look for this 2. Provide all support resources, seamlessly integrate and test artificial
+document in the Search Results column, including travel, for Coast Guard staff intelligence platforms within existing
+and click on it. Then click on the that support this CRADA; audible communication channels.
+Comment option. In your submission, 3. Obtain, transport and provide all However, we do not wish to exclude
+please include the docket number for ensemble items to be used during the other viable participants from this or
+this notice of inquiry and provide a evaluation; future similar CRADAs.
+reason for each suggestion or 4. Provide personnel support to non- This is a technology assessment effort.
+1SECITON recommendation. If your material Federal participants to assist with The goal of the Coast Guard for this
+cannot be submitted using https:// setting up and executing testing in CRADA is to determine the efficacy of
+www.regulations.gov, contact the person artificial intelligence multicast overlays
+htiw
+in the FORFURTHERINFORMATION 1The statute confers this authority on the head of into operational communication
+DORP32NQX11KSD CONTACTsection of this document for each Federal agency. The Secretary of DHS’s platforms currently in use by the Coast
+authority is delegated to the Coast Guard and other
+alternate instructions. To view Guard. Special consideration will be
+DHS organizational elements by DHS Delegation
+documents mentioned in this notice of No. 0160.1, para. II.B.34. given to small business firms and
+no
+rettol
+VerDate Sep<11>2014 17:08 Sep 09, 2025 Jkt 265001 PO 00000 Frm 00038 Fmt 4703 Sfmt 4703 E:\FR\FM\10SEN1.SGM 10SEN1
+
+--- Page 3 ---
+Federal Register/Vol. 90, No. 173/Wednesday, September 10, 2025/Notices 43621
+consortia, and preference will be given FORFURTHERINFORMATIONCONTACT: to represent the FMV, and a tract will
+to business units located in the United Erika Tobin, telephone (435) 636–3605; not be sold unless the bid received
+States. This notice is issued under the address BLM Price Field Office, 126 meets or exceeds BLM’s FMV estimate.
+authority of 5 U.S.C. 552(a). South 600 West, Price, UT 84501; email The lease that may be issued as a result
+etobin@blm.gov. Individuals in the of this offering will provide for payment
+Dated: September 5, 2025.
+United States who are deaf, deafblind, of an annual rental of $3 per acre or
+M.P. Chien,
+hard of hearing, or have a speech fraction thereof and a royalty of 7
+Captain, Commanding Officer, U.S. Coast
+disability may dial 711 (TTY, TDD, or percent until September 30, 2034, at
+Guard Research and Development Center.
+TeleBraille) to access which time the royalty rate will revert
+[FR Doc. 2025–17361 Filed 9–9–25; 8:45 am]
+telecommunications relay services for to the MLA, as amended, prescribed
+BILLING CODE 9110–04–P contacting Ms. Tobin. Individuals royalty rate of the value of the coal
+outside the United States should use the produced by underground mining
+relay services offered within their methods. The value of the coal for
+DEPARTMENT OF THE INTERIOR country to make international calls to royalty purposes will be determined in
+the point-of-contact in the United accordance with 30 CFR part 1206.
+Bureau of Land Management States. This coal lease application (UTU–
+[A2407–014–004–065516; #O2412–014–004– SUPPLEMENTARYINFORMATION: This 92226) is subject to case-by-case
+processing fees pursuant to 43 CFR
+047181.1] competitive coal lease sale is being held
+3473.2(f). The successful bidder must
+in response to a lease by application
+Notice of Federal Competitive Coal submitted by Canyon Fuel Company, pay the BLM the cost of the case-by-case
+Lease Sale, Little Eccles Tract, Utah LLC (CFC). The coal resources to be processing fees as described in the
+(Coal Lease Application UTU–92226) offered consist of all recoverable detailed statement.
+reserves available in the lands identified The required detailed statement under
+AGENCY: Bureau of Land Management, below. These lands are located in: 43 CFR 3422.2 for the offered tract,
+Interior. including bidding instructions and sale
+ACTION: Notice of lease sale. Salt Lake Merdian, Utah procedures under 43 CFR 3422.3–2, and
+T. 14 S., R. 6 E., the terms and conditions of the
+SUMMARY: Notice is hereby given that Sec. 10, W1⁄2SE1⁄4and SE1⁄4SE1⁄4. proposed coal lease, are available in the
+the United States Department of the The area described contains 120 acres, BLM Utah State Office Public Room. All
+Interior, Bureau of Land Management according to the official plat of the survey of case file documents, and written
+(BLM), Utah State Office will offer the the said land on file with the BLM. The comments submitted by the public on
+Federal coal resources described below surface of these lands is managed by the FMV or royalty rates, except those
+United States Forest Service, Manti-La Sal
+as the Little Eccles Tract (UTU–92226) National Forest, and the coal is managed by portions identified as proprietary by the
+for competitive sale by sealed bid the BLM. commentator and meeting exemptions
+package, in accordance with applicable stated in the Freedom of Information
+The Little Eccles tract has one
+laws, including the Mineral Leasing Act Act, are available for public inspection
+minable coal bed called the Lower
+of 1920 (MLA), as amended, and the by contacting Erika Tobin etobin@
+O’Connor A (LOA) seam with minable
+applicable implementing regulations. blm.gov.
+portions ranging from 10.5–15.7 feet in
+The sale tract is located in Emery
+thickness. The tract contains (Authority: 43 CFR 3422.2)
+County, Utah.
+recoverable coal reserves of
+DATES: The lease sale will be held at Gerald Davis,
+approximately 1.29 million tons of high
+1:00 p.m. Mountain Time, on October 1, State Director, Acting.
+volatile C bituminous coal. The final
+2025. Sealed bids must be sent by recoverable reserve tonnage for bidding [FR Doc. 2025–17362 Filed 9–9–25; 8:45 am]
+certified mail, return receipt requested,
+purposes will be in the notice of BILLING CODE 4331–25–P
+to the Collections Officer, BLM, Utah
+proposed sale, which is posted in the
+State Office, or hand-delivered to the
+BLM Utah State Office Public Room.
+BLM public room Contact DEPARTMENT OF THE INTERIOR
+The quality in the coal bed in the
+Representative, BLM Utah State Office,
+lease by application on an ‘‘as received’’
+at the address indicated below. All National Park Service
+basis is as follows: 12,519 Btu/Lb, 5.98
+sealed bid packages must be received no
+percent Moisture, 7.01 percent Ash,
+later than 11:00 a.m. Mountain Time, on [N6498; NPS–WASO–NAGPRA–
+42.70 percent Volatile matter, 44.31
+October 1, 2025. Any bid package NPS0040995; PPWOCRADN0–
+percent Fixed carbon, and 0.52 percent
+received after the time specified will not PCU00RP14.R50000]
+Sulfur. BLM may revise this information
+be considered and will be returned. The
+based on additional information and Notice of Intended Disposition:
+BLM Contact Representative will issue a
+public comments received. Tennessee Valley Authority, Knoxville,
+receipt for each hand-delivered, sealed Pursuant to the applicable TN
+bid package. The outside of the sealed regulations, the Little Eccles Tract may
+envelope containing the bid package be leased to the qualified bidder (as AGENCY: National Park Service, Interior.
+must clearly state the envelope contains established at 43 CFR part 3470, subpart ACTION: Notice.
+a bid for Coal Lease Sale UTU–92226 3472) that submits the highest cash
+and is not to be opened before the date bonus bid that is equal to or exceeds the SUMMARY: In accordance with the Native
+1SECITON and hour of the sale. fair market value (FMV) for the tract as American Graves Protection and
+ADDRESSES: Sealed bids must be mailed determined by the authorized officer Repatriation Act (NAGPRA), the
+to the Collection Officer or hand- after the sale. Tennessee Valley Authority intends to
+htiw
+delivered to the BLM public room The Department of the Interior has carry out the disposition of human
+DORP32NQX11KSD
+Contact Representative at BLM, Utah established a general minimum bid of remains and associated funerary objects
+State Office, 440 West 200 South, Suite $100 per acre or fraction thereof for the removed from Federal or Tribal lands to
+500, Salt Lake City, Utah 84101. tract. The minimum bid is not intended the lineal descendants, Indian Tribe, or
+no
+rettol
+VerDate Sep<11>2014 17:08 Sep 09, 2025 Jkt 265001 PO 00000 Frm 00039 Fmt 4703 Sfmt 4703 E:\FR\FM\10SEN1.SGM 10SEN1

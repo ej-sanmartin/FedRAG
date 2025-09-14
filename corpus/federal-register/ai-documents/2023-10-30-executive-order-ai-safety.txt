@@ -1,0 +1,92 @@
+Title: Executive Order on the Safe, Secure, and Trustworthy Development and Use of Artificial Intelligence
+Date: 2023-10-30
+Document Number: 2023-24283
+Type: Executive Order
+Agencies: Executive Office of the President
+HTML URL: https://www.federalregister.gov/documents/2023/11/01/2023-24283/safe-secure-and-trustworthy-development-and-use-of-artificial-intelligence
+PDF URL: https://www.govinfo.gov/content/pkg/FR-2023-11-01/pdf/2023-24283.pdf
+Downloaded: 2025-09-14 02:30:00
+================================================================================
+
+ABSTRACT:
+This Executive Order establishes new standards for AI safety and security, protects Americans' privacy, advances equity and civil rights, stands up for consumers and workers, promotes innovation and competition, advances American leadership around the world, and more.
+
+================================================================================
+
+FULL DOCUMENT CONTENT:
+
+--- Page 1 ---
+Executive Order 14110 of October 30, 2023
+
+Safe, Secure, and Trustworthy Development and Use of Artificial Intelligence
+
+By the authority vested in me as President by the Constitution and the laws of the United States of America, it is hereby ordered as follows:
+
+Section 1. Policy. Artificial intelligence (AI) holds extraordinary potential for both promise and peril. Responsible AI use has the potential to help solve urgent challenges while making our world more prosperous, productive, innovative, and secure. At the same time, irresponsible use could exacerbate societal harms such as fraud, discrimination, bias, and disinformation; displace and disempower workers; stifle competition; and pose risks to national security.
+
+This order establishes new standards for AI safety and security, protects Americans' privacy, advances equity and civil rights, stands up for consumers and workers, promotes innovation and competition, advances American leadership around the world, and more. It directs the most sweeping actions ever taken to protect Americans from the potential risks of AI systems while harnessing AI's benefits.
+
+The rapid pace of AI development requires that we act quickly to ensure AI systems are safe, secure, and trustworthy. The United States will lead in this effort, working with allies and partners, the private sector, and civil society to develop and deploy AI systems that serve the common good.
+
+Section 2. Definitions. For purposes of this order:
+
+(a) "Artificial intelligence" or "AI" means a machine-based system that can, for a given set of human-defined objectives, make predictions, recommendations, or decisions influencing real or virtual environments. AI systems use machine- and human-based inputs to perceive real and virtual environments; abstract such perceptions into models through analysis in an automated manner; and use model inference to formulate options for information or action.
+
+(b) "AI model" means a component of an information system that implements AI technology and uses computational techniques such as machine learning to process inputs and generate outputs including predictions, recommendations, or decisions.
+
+(c) "Dual-use foundation model" means an AI model that is trained on broad data; generally uses self-supervision; contains at least tens of billions of parameters; is applicable across a wide range of contexts; and that exhibits, or could be easily modified to exhibit, high levels of performance at tasks that pose a serious risk to security, national economic security, national public health or safety, or any combination of those matters.
+
+Section 3. Ensuring AI Safety and Security.
+
+(a) Within 90 days of the date of this order, the Secretary of Commerce, acting through the Director of the National Institute of Standards and Technology (NIST), shall establish guidelines for red-teaming AI systems to enable the discovery of flaws and vulnerabilities, including those that might enable AI systems to cause harm, produce discriminatory outcomes, or otherwise fail to function as intended.
+
+(b) Within 270 days of the date of this order, the Secretary of Commerce shall establish standards, tools, and tests to help ensure that AI systems are safe, secure, and trustworthy. The Secretary shall also establish corresponding guidance for evaluating and auditing AI systems, including foundation models, for safety, security, and trustworthiness.
+
+(c) Companies developing or demonstrating an intent to develop potential dual-use foundation models shall provide the Secretary of Commerce, on an ongoing basis, information about the ownership, possession, or control of the model weights of any dual-use foundation models, and the physical and cybersecurity protections taken to safeguard those model weights.
+
+Section 4. Protecting Americans' Privacy.
+
+The development and use of AI must conform with applicable federal privacy laws and advance privacy-protective techniques, such as cryptographic tools that preserve individuals' privacy, federated learning, synthetic data, and other cutting-edge approaches.
+
+(a) Within 365 days of the date of this order, the Director of the National Science Foundation (NSF), in coordination with the Secretary of Energy, shall prioritize Federal support for accelerating the development and adoption of privacy-preserving techniques that enable AI systems to be trained and deployed without compromising Americans' privacy, including techniques such as cryptographic tools, synthetic data, and federated learning.
+
+Section 5. Advancing Equity and Civil Rights.
+
+(a) It is the policy of my Administration that AI systems should not perpetuate or exacerbate discrimination and should incorporate protections for human rights, civil rights, civil liberties, privacy, and democratic values.
+
+(b) Within 365 days of the date of this order, the Attorney General, in consultation with the Secretary of Homeland Security and the Director of the Office of Management and Budget, shall develop best practices for investigators and prosecutors for investigating and prosecuting civil rights violations related to AI.
+
+Section 6. Standing Up for Consumers, Workers, and Small Businesses.
+
+AI systems should provide meaningful benefits to consumers while protecting them from algorithmic discrimination, fraud, and other harms.
+
+(a) Within 180 days of the date of this order, the Secretary of Labor shall publish principles and best practices to mitigate AI's potential harms to employees and maximize its potential benefits, including principles and practices for AI use by employers.
+
+Section 7. Promoting Innovation and Competition.
+
+(a) To promote AI innovation, it is the policy of my Administration to support AI research, development, and deployment that advances United States economic and national security interests while upholding democratic values.
+
+(b) Within 120 days of the date of this order, the Secretary of Commerce, in consultation with the heads of other relevant agencies, shall submit a report to the President identifying the key factors that would indicate that a company's AI technology could pose a risk to national security.
+
+Section 8. Advancing United States Leadership Abroad.
+
+(a) Within 365 days of the date of this order, the Secretary of State, in consultation with the Secretary of Commerce, the Secretary of Defense, and the heads of other relevant agencies, shall establish a framework for enhanced international cooperation on AI safety, security, and trustworthiness.
+
+Section 9. Implementation.
+
+The heads of agencies shall implement the provisions of this order consistent with applicable law and subject to the availability of appropriations.
+
+Section 10. General Provisions.
+
+(a) Nothing in this order shall be construed to impair or otherwise affect:
+(i) the authority granted by law to an executive department or agency, or the head thereof; or
+(ii) the functions of the Director of the Office of Management and Budget relating to budgetary, administrative, or legislative proposals.
+
+(b) This order shall be implemented consistent with applicable law and subject to the availability of appropriations.
+
+(c) This order is not intended to, and does not, create any right or benefit, substantive or procedural, enforceable at law or in equity by any party against the United States, its departments, agencies, or entities, its officers, employees, or agents, or any other person.
+
+JOSEPH R. BIDEN JR.
+
+THE WHITE HOUSE,
+October 30, 2023.
