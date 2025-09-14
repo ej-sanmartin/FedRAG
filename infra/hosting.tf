@@ -211,12 +211,17 @@ function handler(event) {
     var request = event.request;
     var uri = request.uri;
     
+    // Don't rewrite requests for assets or files with extensions
+    if (uri.startsWith('/assets/') || uri.includes('.')) {
+        return request;
+    }
+    
     // Check whether the URI is missing a file name
     if (uri.endsWith('/')) {
         request.uri += 'index.html';
     }
-    // Check whether the URI is missing a file extension
-    else if (!uri.includes('.')) {
+    // For SPA routes without extensions, serve index.html
+    else {
         request.uri = '/index.html';
     }
     
