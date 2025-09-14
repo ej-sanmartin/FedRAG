@@ -52,9 +52,6 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
-  # Use email as username
-  username_attributes = ["email"]
-
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-${var.environment}-user-pool"
   })
