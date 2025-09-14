@@ -52,18 +52,6 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
-  schema {
-    attribute_data_type = "String"
-    name                = "name"
-    required            = true
-    mutable             = true
-
-    string_attribute_constraints {
-      min_length = 1
-      max_length = 256
-    }
-  }
-
   # Use email as username
   username_attributes = ["email"]
 
