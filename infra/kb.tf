@@ -283,8 +283,8 @@ resource "aws_iam_role" "bedrock_kb_execution_role" {
 # Bedrock Knowledge Base
 # Note: These resources require AWS provider version with Bedrock support
 # Bedrock Knowledge Base resources
-# Note: These resources are not supported in AWS provider < 5.31.0
-# Knowledge Base created manually via AWS CLI
+# Note: These resources are not supported in AWS provider < 5.31.0 (my local dev environment)
+# Knowledge Base created manually via AWS Console
 # 
 # Uncomment these when using AWS provider 5.31.0+:
 #
