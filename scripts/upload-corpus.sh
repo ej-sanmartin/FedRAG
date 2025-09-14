@@ -74,8 +74,8 @@ fi
 # Upload files with progress
 UPLOADED=0
 find "$CORPUS_DIR" -type f \( -name "*.txt" -o -name "*.md" -o -name "*.pdf" -o -name "*.docx" \) | while read -r file; do
-    # Get relative path from corpus directory
-    RELATIVE_PATH=$(realpath --relative-to="$CORPUS_DIR" "$file")
+    # Get relative path from corpus directory (macOS compatible)
+    RELATIVE_PATH="${file#$CORPUS_DIR/}"
     
     # Upload file
     if aws s3 cp "$file" "s3://$BUCKET_NAME/$RELATIVE_PATH" --quiet; then
