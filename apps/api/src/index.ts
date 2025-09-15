@@ -380,9 +380,11 @@ function createErrorResponse(
     statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-      'Access-Control-Allow-Methods': 'POST,OPTIONS',
+      'Access-Control-Allow-Origin': 'https://d75yomy6kysc3.cloudfront.net',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-amz-date,x-amz-security-token,x-amz-user-agent,x-api-key',
+      'Access-Control-Allow-Methods': 'GET,OPTIONS,POST',
+      'Access-Control-Allow-Credentials': 'true',
+      'Vary': 'Origin',
       'X-Correlation-ID': correlationId,
     },
     body: JSON.stringify(errorResponse),
@@ -400,9 +402,11 @@ function createSuccessResponse(
     statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-      'Access-Control-Allow-Methods': 'POST,OPTIONS',
+      'Access-Control-Allow-Origin': 'https://d75yomy6kysc3.cloudfront.net',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-amz-date,x-amz-security-token,x-amz-user-agent,x-api-key',
+      'Access-Control-Allow-Methods': 'GET,OPTIONS,POST',
+      'Access-Control-Allow-Credentials': 'true',
+      'Vary': 'Origin',
       'X-Correlation-ID': correlationId,
     },
     body: JSON.stringify(data),
@@ -421,12 +425,20 @@ export async function handler(
 
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
+    logger.info('Handling OPTIONS preflight request', {
+      path: event.path,
+      headers: event.headers,
+    });
+    
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS',
+        'Access-Control-Allow-Origin': 'https://d75yomy6kysc3.cloudfront.net',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-amz-date,x-amz-security-token,x-amz-user-agent,x-api-key',
+        'Access-Control-Allow-Methods': 'GET,OPTIONS,POST',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Max-Age': '86400',
+        'Vary': 'Origin',
       },
       body: '',
     };
