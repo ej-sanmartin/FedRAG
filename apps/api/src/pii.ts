@@ -267,12 +267,13 @@ export class PiiService {
    * @returns AwsServiceError - Normalized error object
    */
   private handleComprehendError(error: unknown): AwsServiceError {
+    const err = error as any; // Type assertion for AWS SDK error
     const awsError: AwsServiceError = {
-      name: error.name || 'ComprehendError',
-      message: error.message || 'Unknown Comprehend service error',
-      code: error.Code || error.$metadata?.httpStatusCode?.toString(),
-      statusCode: error.$metadata?.httpStatusCode,
-      retryable: error.$retryable?.throttling || false,
+      name: err.name || 'ComprehendError',
+      message: err.message || 'Unknown Comprehend service error',
+      code: err.Code || err.$metadata?.httpStatusCode?.toString(),
+      statusCode: err.$metadata?.httpStatusCode,
+      retryable: err.$retryable?.throttling || false,
     };
 
     // Log error details for debugging (in production, use structured logging)
