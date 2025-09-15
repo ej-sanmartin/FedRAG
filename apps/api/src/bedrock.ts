@@ -101,13 +101,7 @@ export class BedrockKnowledgeBase {
       return this.processBedrockResponse(response);
     } catch (error) {
       const awsError = this.handleBedrockError(error);
-      console.error(JSON.stringify({
-        operation: 'bedrock_retrieve_and_generate_error',
-        error: awsError.name,
-        message: awsError.message,
-        code: awsError.code,
-        retryable: awsError.retryable,
-      }));
+      
       throw awsError;
     }
   }
@@ -350,8 +344,8 @@ export function createBedrockKnowledgeBase(
  */
 export function isGuardrailIntervention(error: AwsServiceError): boolean {
   return error.name === 'GuardrailIntervention' || 
-         (error.message && error.message.toLowerCase().includes('guardrail')) ||
-         (error.message && error.message.toLowerCase().includes('content policy'));
+         (typeof error.message === 'string' && error.message.toLowerCase().includes('guardrail')) ||
+         (typeof error.message === 'string' && error.message.toLowerCase().includes('content policy'));
 }
 
 /**
