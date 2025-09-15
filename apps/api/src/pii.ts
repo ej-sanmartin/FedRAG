@@ -147,8 +147,19 @@ export class PiiService {
       return text;
     }
 
+    // Filter out entities with invalid offsets for masking only
+    const validEntities = entities.filter(entity => 
+      entity.BeginOffset >= 0 && 
+      entity.EndOffset > entity.BeginOffset && 
+      entity.EndOffset <= text.length
+    );
+
+    if (validEntities.length === 0) {
+      return text;
+    }
+
     // Sort entities by start position (descending) to process from end to beginning
-    const sortedEntities = [...entities].sort((a, b) => b.BeginOffset - a.BeginOffset);
+    const sortedEntities = [...validEntities].sort((a, b) => b.BeginOffset - a.BeginOffset);
     
     // Merge overlapping spans to avoid double-masking
     const mergedSpans = this.mergeOverlappingSpans(sortedEntities);
@@ -255,7 +266,7 @@ export class PiiService {
    * @param error - Raw error from AWS SDK
    * @returns AwsServiceError - Normalized error object
    */
-  private handleComprehendError(error: any): AwsServiceError {
+  private handleComprehendError(error: unknown): AwsServiceError {
     const awsError: AwsServiceError = {
       name: error.name || 'ComprehendError',
       message: error.message || 'Unknown Comprehend service error',
