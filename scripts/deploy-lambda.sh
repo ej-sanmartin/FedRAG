@@ -68,10 +68,24 @@ aws lambda wait function-updated \
 
 # Test the function
 echo "🧪 Testing function..."
+
+# Create test payload file
+cat > /tmp/lambda-test-payload.json << 'EOF'
+{
+  "httpMethod": "OPTIONS",
+  "path": "/chat",
+  "headers": {
+    "Origin": "https://d75yomy6kysc3.cloudfront.net",
+    "Content-Type": "application/json"
+  }
+}
+EOF
+
 TEST_RESULT=$(aws lambda invoke \
     --function-name "$FUNCTION_NAME" \
     --region "$REGION" \
-    --payload '{"httpMethod":"OPTIONS","path":"/chat","headers":{"Origin":"https://d75yomy6kysc3.cloudfront.net"}}' \
+    --cli-binary-format raw-in-base64-out \
+    --payload file:///tmp/lambda-test-payload.json \
     --output json \
     /tmp/lambda-test-output.json)
 
@@ -87,8 +101,8 @@ else
     cat /tmp/lambda-test-output.json
 fi
 
-# Clean up test file
-rm -f /tmp/lambda-test-output.json
+# Clean up test files
+rm -f /tmp/lambda-test-output.json /tmp/lambda-test-payload.json
 
 echo "🎉 Lambda deployment complete!"
 echo ""

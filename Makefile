@@ -172,10 +172,6 @@ generate-web-env: ## Generate web .env file from Terraform outputs (requires dep
 		exit 1; \
 	fi
 
-master-deploy: ## Run comprehensive deployment with master script
-	@echo "Running master deployment script..."
-	./scripts/master-deploy.sh
-
 master-deploy-auto: ## Run master deployment with auto-approval
 	@echo "Running master deployment script with auto-approval..."
 	./scripts/master-deploy.sh --auto-approve
