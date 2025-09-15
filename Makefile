@@ -135,6 +135,14 @@ deploy-all: package-lambda build-web deploy-infra ## Build and deploy everything
 	@echo "1. Upload corpus documents: make upload-corpus BUCKET_NAME=<bucket> CORPUS_DIR=<dir>"
 	@echo "2. Validate deployment: make validate-deployment API_URL=<api-url>"
 
+master-deploy: ## Run comprehensive deployment with master script
+	@echo "Running master deployment script..."
+	./scripts/master-deploy.sh
+
+master-deploy-auto: ## Run master deployment with auto-approval
+	@echo "Running master deployment script with auto-approval..."
+	./scripts/master-deploy.sh --auto-approve
+
 # Development Workflow
 dev-setup: install ## Set up development environment
 	@echo "Setting up development environment..."
