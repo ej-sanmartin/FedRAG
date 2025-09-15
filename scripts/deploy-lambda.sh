@@ -93,5 +93,20 @@ rm -f /tmp/lambda-test-output.json
 echo "🎉 Lambda deployment complete!"
 echo ""
 echo "Next steps:"
-echo "1. Test CORS: curl -X OPTIONS 'https://vgyktcw1a7.execute-api.us-east-1.amazonaws.com/dev/chat' -H 'Origin: https://d75yomy6kysc3.cloudfront.net' -v"
+
+# Get API Gateway URL dynamically
+if [ -f "infra/terraform.tfstate" ] || [ -f "infra/.terraform/terraform.tfstate" ]; then
+    cd infra 2>/dev/null || true
+    API_URL=$(terraform output -raw api_gateway_url 2>/dev/null || echo "")
+    cd .. 2>/dev/null || true
+    
+    if [ -n "$API_URL" ]; then
+        echo "1. Test CORS: curl -X OPTIONS '${API_URL}/chat' -H 'Origin: https://d75yomy6kysc3.cloudfront.net' -v"
+    else
+        echo "1. Test CORS: curl -X OPTIONS 'https://<your-api-id>.execute-api.us-east-1.amazonaws.com/dev/chat' -H 'Origin: <your-web-url>' -v"
+    fi
+else
+    echo "1. Test CORS: curl -X OPTIONS 'https://<your-api-id>.execute-api.us-east-1.amazonaws.com/dev/chat' -H 'Origin: <your-web-url>' -v"
+fi
+
 echo "2. Test your web application chat functionality"

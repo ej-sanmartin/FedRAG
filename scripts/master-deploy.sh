@@ -1,9 +1,14 @@
 #!/bin/bash
 
-# FedRAG Master Deployment Script
-# This script handles the complete deployment workflow for FedRAG
+# FedRag Master Deployment Script
+# This script handles the complete deployment process for the FedRag application
+# including infrastructure, Lambda function, and web application
 
-set -e  # Exit on any error
+set -e
+
+# Configuration
+PROJECT_NAME="fedrag"
+REGION="us-east-1"
 
 # Colors for output
 RED='\033[0;31m'
@@ -14,228 +19,378 @@ NC='\033[0m' # No Color
 
 # Logging functions
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}✅ $1${NC}"
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}⚠️  $1${NC}"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}❌ $1${NC}"
 }
 
-# Check if we're in the right directory
-if [ ! -f "Makefile" ] || [ ! -d "infra" ] || [ ! -d "apps" ]; then
-    log_error "Please run this script from the FedRAG root directory"
-    exit 1
-fi
+log_step() {
+    echo -e "\n${BLUE}🔄 $1${NC}"
+}
 
-# Parse command line arguments
-SKIP_TESTS=false
-SKIP_INFRA=false
-SKIP_LAMBDA=false
-SKIP_WEB=false
-AUTO_APPROVE=false
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --skip-tests)
-            SKIP_TESTS=true
-            shift
-            ;;
-        --skip-infra)
-            SKIP_INFRA=true
-            shift
-            ;;
-        --skip-lambda)
-            SKIP_LAMBDA=true
-            shift
-            ;;
-        --skip-web)
-            SKIP_WEB=true
-            shift
-            ;;
-        --auto-approve)
-            AUTO_APPROVE=true
-            shift
-            ;;
-        -h|--help)
-            echo "FedRAG Master Deployment Script"
-            echo ""
-            echo "Usage: $0 [OPTIONS]"
-            echo ""
-            echo "Options:"
-            echo "  --skip-tests      Skip running tests"
-            echo "  --skip-infra      Skip infrastructure deployment"
-            echo "  --skip-lambda     Skip Lambda function deployment"
-            echo "  --skip-web        Skip web application build"
-            echo "  --auto-approve    Auto-approve Terraform changes"
-            echo "  -h, --help        Show this help message"
-            echo ""
-            echo "Examples:"
-            echo "  $0                          # Full deployment with prompts"
-            echo "  $0 --auto-approve          # Full deployment without prompts"
-            echo "  $0 --skip-tests --skip-web # Deploy only infrastructure and Lambda"
-            exit 0
-            ;;
-        *)
-            log_error "Unknown option: $1"
-            echo "Use --help for usage information"
-            exit 1
-            ;;
-    esac
-done
-
-log_info "Starting FedRAG Master Deployment"
-log_info "=================================="
-
-# Step 1: Pre-deployment checks
-log_info "Step 1: Pre-deployment checks"
-
-# Check required files
-if [ ! -f "infra/terraform.tfvars" ]; then
-    log_error "infra/terraform.tfvars not found. Copy from terraform.tfvars.example and configure."
-    exit 1
-fi
-
-if [ ! -f "apps/web/.env" ]; then
-    log_warning "apps/web/.env not found. Copy from .env.example and configure if needed."
-fi
-
-# Check required tools
-command -v terraform >/dev/null 2>&1 || { log_error "terraform is required but not installed."; exit 1; }
-command -v aws >/dev/null 2>&1 || { log_error "aws CLI is required but not installed."; exit 1; }
-command -v pnpm >/dev/null 2>&1 || { log_error "pnpm is required but not installed."; exit 1; }
-
-log_success "Pre-deployment checks passed"
-
-# Step 2: Install dependencies
-log_info "Step 2: Installing dependencies"
-pnpm install
-log_success "Dependencies installed"
-
-# Step 3: Run tests (optional)
-if [ "$SKIP_TESTS" = false ]; then
-    log_info "Step 3: Running tests"
-    pnpm run test
-    log_success "Tests passed"
-else
-    log_warning "Step 3: Skipping tests"
-fi
-
-# Step 4: Build Lambda package
-if [ "$SKIP_LAMBDA" = false ]; then
-    log_info "Step 4: Building Lambda package"
-    make package-lambda
-    log_success "Lambda package built"
-else
-    log_warning "Step 4: Skipping Lambda build"
-fi
-
-# Step 5: Build web application
-if [ "$SKIP_WEB" = false ]; then
-    log_info "Step 5: Building web application"
-    make build-web
-    log_success "Web application built"
-else
-    log_warning "Step 5: Skipping web build"
-fi
-
-# Step 6: Deploy infrastructure
-if [ "$SKIP_INFRA" = false ]; then
-    log_info "Step 6: Deploying infrastructure"
+# Check prerequisites
+check_prerequisites() {
+    log_step "Checking prerequisites..."
     
-    cd infra
-    terraform init
-    
-    # Generate plan
-    terraform plan -out=tfplan
-    
-    if [ "$AUTO_APPROVE" = false ]; then
-        echo ""
-        log_info "Review the Terraform plan above."
-        read -p "Continue with infrastructure deployment? [y/N]: " -r
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_warning "Infrastructure deployment cancelled"
-            rm -f tfplan
-            cd ..
-            exit 0
-        fi
+    # Check AWS CLI
+    if ! command -v aws &> /dev/null; then
+        log_error "AWS CLI not found. Please install AWS CLI."
+        exit 1
     fi
     
-    # Apply changes
+    # Check AWS credentials
+    if ! aws sts get-caller-identity >/dev/null 2>&1; then
+        log_error "AWS CLI not configured. Please run 'aws configure' first."
+        exit 1
+    fi
+    
+    # Check Terraform
+    if ! command -v terraform &> /dev/null; then
+        log_error "Terraform not found. Please install Terraform."
+        exit 1
+    fi
+    
+    # Check Node.js and pnpm
+    if ! command -v node &> /dev/null; then
+        log_error "Node.js not found. Please install Node.js."
+        exit 1
+    fi
+    
+    if ! command -v pnpm &> /dev/null; then
+        log_error "pnpm not found. Please install pnpm."
+        exit 1
+    fi
+    
+    # Check required files
+    if [ ! -f "infra/terraform.tfvars" ]; then
+        log_error "infra/terraform.tfvars not found. Please create it from terraform.tfvars.example"
+        exit 1
+    fi
+    
+    log_success "All prerequisites met"
+}
+
+# Install dependencies
+install_dependencies() {
+    log_step "Installing dependencies..."
+    pnpm install
+    log_success "Dependencies installed"
+}
+
+# Run tests
+run_tests() {
+    log_step "Running tests..."
+    pnpm run test
+    log_success "All tests passed"
+}
+
+# Package Lambda function
+package_lambda() {
+    log_step "Packaging Lambda function..."
+    make package-lambda
+    
+    if [ ! -f "apps/api/lambda-deployment.zip" ]; then
+        log_error "Lambda package not created"
+        exit 1
+    fi
+    
+    log_success "Lambda function packaged"
+}
+
+# Generate web environment file
+generate_web_env() {
+    log_step "Generating web environment configuration..."
+    
+    cd infra
+    
+    # Get values from Terraform outputs
+    API_URL=$(terraform output -raw api_gateway_url 2>/dev/null || echo "")
+    WEB_URL=$(terraform output -raw web_url 2>/dev/null || echo "")
+    COGNITO_USER_POOL_ID=$(terraform output -raw cognito_user_pool_id 2>/dev/null || echo "")
+    COGNITO_CLIENT_ID=$(terraform output -raw cognito_user_pool_client_id 2>/dev/null || echo "")
+    COGNITO_DOMAIN=$(terraform output -raw cognito_hosted_ui_url 2>/dev/null || echo "")
+    
+    cd ..
+    
+    if [ -z "$API_URL" ] || [ -z "$WEB_URL" ]; then
+        log_warning "Could not get all required values from Terraform. Using existing .env file."
+        return
+    fi
+    
+    # Generate .env file
+    cat > apps/web/.env << EOF
+# Cognito Configuration
+VITE_COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+VITE_COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+VITE_COGNITO_DOMAIN=${COGNITO_DOMAIN#https://}
+VITE_COGNITO_REDIRECT_URI=${WEB_URL}/callback
+VITE_COGNITO_LOGOUT_URI=${WEB_URL}
+
+# API Configuration
+VITE_API_URL=${API_URL}
+
+# Application Configuration
+VITE_APP_NAME=FedRag Assistant
+VITE_APP_VERSION=1.0.0
+
+# Development Configuration
+VITE_DEV_MODE=true
+VITE_LOG_LEVEL=debug
+
+# Feature Flags
+VITE_ENABLE_PII_TOGGLE=true
+VITE_ENABLE_CITATIONS=true
+VITE_ENABLE_GUARDRAIL_BANNER=true
+
+# UI Configuration
+VITE_MAX_MESSAGE_LENGTH=2000
+VITE_CHAT_HISTORY_LIMIT=50
+VITE_CITATION_PANEL_WIDTH=400
+
+# AWS Region (for reference)
+VITE_AWS_REGION=us-east-1
+EOF
+    
+    log_success "Web environment configuration generated"
+}
+
+# Build web application
+build_web() {
+    log_step "Building web application..."
+    make build-web
+    
+    if [ ! -d "apps/web/dist" ]; then
+        log_error "Web build not created"
+        exit 1
+    fi
+    
+    log_success "Web application built"
+}
+
+# Deploy infrastructure
+deploy_infrastructure() {
+    log_step "Deploying infrastructure..."
+    
+    cd infra
+    
+    # Initialize Terraform
+    terraform init
+    
+    # Plan deployment
+    log_info "Creating Terraform plan..."
+    terraform plan -out=tfplan
+    
+    # Apply deployment
+    log_info "Applying Terraform changes..."
     terraform apply tfplan
+    
+    # Clean up plan file
     rm -f tfplan
+    
     cd ..
     
     log_success "Infrastructure deployed"
-else
-    log_warning "Step 6: Skipping infrastructure deployment"
-fi
+}
 
-# Step 7: Update Lambda function (if infrastructure was deployed)
-if [ "$SKIP_INFRA" = false ] && [ "$SKIP_LAMBDA" = false ]; then
-    log_info "Step 7: Updating Lambda function"
+# Deploy Lambda function
+deploy_lambda() {
+    log_step "Deploying Lambda function..."
     
-    # Get the Lambda function name from Terraform output
-    LAMBDA_FUNCTION_NAME=$(cd infra && terraform output -raw lambda_function_name 2>/dev/null || echo "fedrag-api")
+    # Use the existing deploy script
+    ./scripts/deploy-lambda.sh
     
-    if [ -f "apps/api/lambda-deployment.zip" ]; then
-        aws lambda update-function-code \
-            --function-name "$LAMBDA_FUNCTION_NAME" \
-            --zip-file fileb://apps/api/lambda-deployment.zip
-        
-        # Wait for update to complete
-        log_info "Waiting for Lambda update to complete..."
-        aws lambda wait function-updated --function-name "$LAMBDA_FUNCTION_NAME"
-        
-        log_success "Lambda function updated"
-    else
-        log_error "Lambda deployment package not found. Run 'make package-lambda' first."
-        exit 1
-    fi
-else
-    log_warning "Step 7: Skipping Lambda update"
-fi
+    log_success "Lambda function deployed"
+}
 
-# Step 8: Get deployment outputs
-log_info "Step 8: Deployment Summary"
-log_info "========================="
-
-if [ "$SKIP_INFRA" = false ]; then
+# Test CORS
+test_cors() {
+    log_step "Testing CORS configuration..."
+    
+    # Get API Gateway URL from Terraform output
     cd infra
-    
-    # Get key outputs
-    API_URL=$(terraform output -raw api_gateway_url 2>/dev/null || echo "Not available")
-    WEB_URL=$(terraform output -raw web_url 2>/dev/null || echo "Not available")
-    COGNITO_DOMAIN=$(terraform output -raw cognito_user_pool_domain 2>/dev/null || echo "Not available")
-    
+    API_URL=$(terraform output -raw api_gateway_url 2>/dev/null || echo "")
     cd ..
     
-    log_success "Deployment completed successfully!"
-    echo ""
-    echo "📋 Deployment Information:"
-    echo "  🌐 Web Application: $WEB_URL"
-    echo "  🔗 API Gateway: $API_URL"
-    echo "  🔐 Cognito Domain: $COGNITO_DOMAIN"
-    echo ""
-    echo "🔄 Next Steps:"
-    echo "  1. Upload corpus documents (if needed):"
-    echo "     make upload-corpus BUCKET_NAME=<bucket> CORPUS_DIR=<dir>"
-    echo ""
-    echo "  2. Test the deployment:"
-    echo "     curl -X OPTIONS $API_URL/chat -H 'Origin: $WEB_URL' -v"
-    echo ""
-    echo "  3. Access the web application:"
-    echo "     open $WEB_URL"
+    if [ -z "$API_URL" ]; then
+        log_warning "Could not get API Gateway URL from Terraform outputs. Skipping CORS test."
+        return
+    fi
     
-else
-    log_success "Deployment completed (infrastructure skipped)"
-fi
+    # Wait a moment for deployment to propagate
+    sleep 5
+    
+    # Test OPTIONS request
+    CORS_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X OPTIONS "${API_URL}/chat" \
+        -H "Content-Type: application/json" \
+        -H "Origin: https://d75yomy6kysc3.cloudfront.net")
+    
+    if [ "$CORS_RESPONSE" = "200" ]; then
+        log_success "CORS test passed (HTTP $CORS_RESPONSE)"
+    else
+        log_warning "CORS test failed (HTTP $CORS_RESPONSE)"
+        log_info "This might resolve after a few minutes due to AWS propagation delays"
+        log_info "Test manually: curl -X OPTIONS '${API_URL}/chat' -H 'Origin: https://d75yomy6kysc3.cloudfront.net' -v"
+    fi
+}
 
-log_info "🎉 FedRAG deployment finished!"
+# Deploy web application (if S3 bucket exists)
+deploy_web() {
+    log_step "Deploying web application..."
+    
+    # Get S3 bucket name from Terraform output
+    cd infra
+    WEB_BUCKET=$(terraform output -raw web_bucket_name 2>/dev/null || echo "")
+    cd ..
+    
+    if [ -z "$WEB_BUCKET" ]; then
+        log_warning "Web bucket not found in Terraform outputs. Skipping web deployment."
+        return
+    fi
+    
+    # Sync web files to S3
+    aws s3 sync apps/web/dist/ "s3://$WEB_BUCKET" --delete
+    
+    # Invalidate CloudFront cache
+    CLOUDFRONT_ID=$(cd infra && terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
+    if [ -n "$CLOUDFRONT_ID" ]; then
+        log_info "Invalidating CloudFront cache..."
+        aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_ID" \
+            --paths "/*" >/dev/null
+    fi
+    
+    log_success "Web application deployed"
+}
+
+# Show deployment summary
+show_summary() {
+    log_step "Deployment Summary"
+    
+    cd infra
+    
+    echo ""
+    echo "🌐 Application URLs:"
+    
+    # API Gateway URL
+    API_URL=$(terraform output -raw api_gateway_url 2>/dev/null || echo "Not available")
+    echo "   API: $API_URL"
+    
+    # Web URL
+    WEB_URL=$(terraform output -raw web_url 2>/dev/null || echo "Not available")
+    echo "   Web: $WEB_URL"
+    
+    # Cognito URLs
+    COGNITO_URL=$(terraform output -raw cognito_hosted_ui_url 2>/dev/null || echo "Not available")
+    echo "   Auth: $COGNITO_URL"
+    
+    echo ""
+    echo "🔧 Test Commands:"
+    echo "   CORS Test: curl -X OPTIONS '$API_URL/chat' -H 'Origin: $WEB_URL' -v"
+    echo "   Health Check: curl '$API_URL/health'"
+    
+    echo ""
+    echo "📊 Next Steps:"
+    echo "   1. Upload corpus documents: make upload-corpus BUCKET_NAME=<bucket> CORPUS_DIR=<dir>"
+    echo "   2. Test the web application at: $WEB_URL"
+    echo "   3. Monitor logs: make logs FUNCTION_NAME=fedrag-api"
+    
+    cd ..
+}
+
+# Main deployment function
+main() {
+    echo "🚀 FedRag Master Deployment Starting..."
+    echo "========================================"
+    
+    # Parse command line arguments
+    SKIP_TESTS=false
+    SKIP_INFRA=false
+    SKIP_WEB=false
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --skip-tests)
+                SKIP_TESTS=true
+                shift
+                ;;
+            --skip-infra)
+                SKIP_INFRA=true
+                shift
+                ;;
+            --skip-web)
+                SKIP_WEB=true
+                shift
+                ;;
+            --help)
+                echo "Usage: $0 [OPTIONS]"
+                echo ""
+                echo "Options:"
+                echo "  --skip-tests    Skip running tests"
+                echo "  --skip-infra    Skip infrastructure deployment"
+                echo "  --skip-web      Skip web application deployment"
+                echo "  --help          Show this help message"
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                echo "Use --help for usage information"
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Execute deployment steps
+    check_prerequisites
+    install_dependencies
+    
+    if [ "$SKIP_TESTS" = false ]; then
+        run_tests
+    else
+        log_warning "Skipping tests (--skip-tests flag used)"
+    fi
+    
+    package_lambda
+    
+    if [ "$SKIP_WEB" = false ]; then
+        build_web
+    fi
+    
+    if [ "$SKIP_INFRA" = false ]; then
+        deploy_infrastructure
+        
+        # Generate web environment after infrastructure is deployed
+        if [ "$SKIP_WEB" = false ]; then
+            generate_web_env
+        fi
+    else
+        log_warning "Skipping infrastructure deployment (--skip-infra flag used)"
+    fi
+    
+    deploy_lambda
+    test_cors
+    
+    if [ "$SKIP_WEB" = false ]; then
+        deploy_web
+    else
+        log_warning "Skipping web deployment (--skip-web flag used)"
+    fi
+    
+    show_summary
+    
+    echo ""
+    log_success "🎉 FedRag deployment completed successfully!"
+}
+
+# Run main function with all arguments
+main "$@"

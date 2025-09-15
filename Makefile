@@ -46,6 +46,9 @@ deploy-lambda: ## Deploy Lambda function (requires existing infrastructure)
 	@echo "Deploying Lambda function..."
 	./scripts/deploy-lambda.sh
 
+deploy-lambda-quick: package-lambda deploy-lambda ## Package and deploy Lambda function quickly
+	@echo "Quick Lambda deployment completed!"
+
 build-web: ## Build web application for production
 	@echo "Building web application..."
 	cd apps/web && pnpm run build
@@ -134,6 +137,40 @@ deploy-all: package-lambda build-web deploy-infra ## Build and deploy everything
 	@echo "Next steps:"
 	@echo "1. Upload corpus documents: make upload-corpus BUCKET_NAME=<bucket> CORPUS_DIR=<dir>"
 	@echo "2. Validate deployment: make validate-deployment API_URL=<api-url>"
+
+master-deploy: ## Run complete deployment with master script
+	@echo "Running master deployment script..."
+	./scripts/master-deploy.sh
+
+master-deploy-fast: ## Run master deployment skipping tests
+	@echo "Running fast master deployment (skipping tests)..."
+	./scripts/master-deploy.sh --skip-tests
+
+master-deploy-lambda-only: ## Deploy only Lambda function and test CORS
+	@echo "Deploying Lambda function only..."
+	./scripts/master-deploy.sh --skip-infra --skip-web --skip-tests
+
+generate-web-env: ## Generate web .env file from Terraform outputs (requires deployed infrastructure)
+	@echo "Generating web environment configuration..."
+	@cd infra && \
+	API_URL=$$(terraform output -raw api_gateway_url 2>/dev/null || echo "") && \
+	WEB_URL=$$(terraform output -raw web_url 2>/dev/null || echo "") && \
+	COGNITO_USER_POOL_ID=$$(terraform output -raw cognito_user_pool_id 2>/dev/null || echo "") && \
+	COGNITO_CLIENT_ID=$$(terraform output -raw cognito_user_pool_client_id 2>/dev/null || echo "") && \
+	COGNITO_DOMAIN=$$(terraform output -raw cognito_hosted_ui_url 2>/dev/null || echo "") && \
+	cd .. && \
+	if [ -n "$$API_URL" ] && [ -n "$$WEB_URL" ]; then \
+		sed -e "s|<your-api-gateway-url>|$$API_URL|g" \
+		    -e "s|<your-web-url>|$$WEB_URL|g" \
+		    -e "s|<your-user-pool-id>|$$COGNITO_USER_POOL_ID|g" \
+		    -e "s|<your-client-id>|$$COGNITO_CLIENT_ID|g" \
+		    -e "s|<your-cognito-domain>|$${COGNITO_DOMAIN#https://}|g" \
+		    apps/web/.env.example > apps/web/.env; \
+		echo "✅ Web environment configuration generated"; \
+	else \
+		echo "❌ Could not get required values from Terraform outputs"; \
+		exit 1; \
+	fi
 
 master-deploy: ## Run comprehensive deployment with master script
 	@echo "Running master deployment script..."
