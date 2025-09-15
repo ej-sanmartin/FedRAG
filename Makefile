@@ -39,9 +39,12 @@ lint: ## Run linting on all projects
 # Build Commands
 package-lambda: ## Package Lambda function for deployment
 	@echo "Packaging Lambda function..."
-	cd apps/api && pnpm run build
-	cd apps/api && pnpm run package
+	./scripts/package-lambda.sh
 	@echo "Lambda package created: apps/api/lambda-deployment.zip"
+
+deploy-lambda: ## Deploy Lambda function (requires existing infrastructure)
+	@echo "Deploying Lambda function..."
+	./scripts/deploy-lambda.sh
 
 build-web: ## Build web application for production
 	@echo "Building web application..."
