@@ -194,7 +194,7 @@ describe('End-to-End Integration Tests', () => {
     expect(response).toHaveProperty('headers');
     expect(response).toHaveProperty('body');
     expect(response.headers).toHaveProperty('Content-Type', 'application/json');
-    expect(response.headers).toHaveProperty('Access-Control-Allow-Origin', '*');
+    expect(response.headers).toHaveProperty('Access-Control-Allow-Origin', 'https://d75yomy6kysc3.cloudfront.net');
     expect(response.headers).toHaveProperty('X-Correlation-ID');
     
     if (response.statusCode === 200) {

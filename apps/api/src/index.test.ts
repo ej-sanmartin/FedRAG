@@ -159,7 +159,7 @@ describe('Lambda Handler Integration Tests', () => {
       // Assert
       expect(result.statusCode).toBe(200);
       expect(result.headers['Content-Type']).toBe('application/json');
-      expect(result.headers['Access-Control-Allow-Origin']).toBe('*');
+      expect(result.headers['Access-Control-Allow-Origin']).toBe('https://d75yomy6kysc3.cloudfront.net');
       expect(result.headers['X-Correlation-ID']).toBeDefined();
 
       const responseBody = JSON.parse(result.body);
@@ -416,8 +416,8 @@ describe('Lambda Handler Integration Tests', () => {
 
       // Assert
       expect(result.statusCode).toBe(200);
-      expect(result.headers['Access-Control-Allow-Origin']).toBe('*');
-      expect(result.headers['Access-Control-Allow-Methods']).toBe('POST,OPTIONS');
+      expect(result.headers['Access-Control-Allow-Origin']).toBe('https://d75yomy6kysc3.cloudfront.net');
+      expect(result.headers['Access-Control-Allow-Methods']).toBe('GET,OPTIONS,POST');
       expect(result.body).toBe('');
     });
 
@@ -467,9 +467,9 @@ describe('Lambda Handler Integration Tests', () => {
       const result = await handler(mockEvent, mockContext);
 
       // Assert
-      expect(result.headers['Access-Control-Allow-Origin']).toBe('*');
-      expect(result.headers['Access-Control-Allow-Headers']).toBe('Content-Type,Authorization');
-      expect(result.headers['Access-Control-Allow-Methods']).toBe('POST,OPTIONS');
+      expect(result.headers['Access-Control-Allow-Origin']).toBe('https://d75yomy6kysc3.cloudfront.net');
+      expect(result.headers['Access-Control-Allow-Headers']).toBe('Content-Type,Authorization,x-amz-date,x-amz-security-token,x-amz-user-agent,x-api-key');
+      expect(result.headers['Access-Control-Allow-Methods']).toBe('GET,OPTIONS,POST');
       expect(result.headers['Content-Type']).toBe('application/json');
       expect(result.headers['X-Correlation-ID']).toBeDefined();
     });

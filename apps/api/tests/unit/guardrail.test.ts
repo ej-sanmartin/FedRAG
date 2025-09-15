@@ -104,8 +104,8 @@ describe('Guardrail Intervention Scenarios', () => {
       bedrockMock.on(RetrieveAndGenerateCommand).rejects(selfHarmError);
 
       await expect(knowledgeBase.askKb('Self-harm related query')).rejects.toMatchObject({
-        name: 'GuardrailIntervention',
-        message: 'Content blocked by guardrails',
+        name: 'ValidationException',
+        message: 'Invalid request parameters: Guardrail intervention: SELF_HARM content detected',
         statusCode: 400,
       });
     });
@@ -119,8 +119,8 @@ describe('Guardrail Intervention Scenarios', () => {
       bedrockMock.on(RetrieveAndGenerateCommand).rejects(sexualError);
 
       await expect(knowledgeBase.askKb('Sexual content query')).rejects.toMatchObject({
-        name: 'GuardrailIntervention',
-        message: 'Content blocked by guardrails',
+        name: 'ValidationException',
+        message: 'Invalid request parameters: Content policy violation - SEXUAL category',
         statusCode: 400,
       });
     });
@@ -134,8 +134,8 @@ describe('Guardrail Intervention Scenarios', () => {
       bedrockMock.on(RetrieveAndGenerateCommand).rejects(multiHarmError);
 
       await expect(knowledgeBase.askKb('Multi-category harmful query')).rejects.toMatchObject({
-        name: 'GuardrailIntervention',
-        message: 'Content blocked by guardrails',
+        name: 'ValidationException',
+        message: 'Invalid request parameters: Guardrail blocked content: HATE, VIOLENCE categories violated',
         statusCode: 400,
       });
     });
@@ -179,8 +179,8 @@ describe('Guardrail Intervention Scenarios', () => {
       bedrockMock.on(RetrieveAndGenerateCommand).rejects(medicalAdviceError);
 
       await expect(knowledgeBase.askKb('What medication should I take for my symptoms?')).rejects.toMatchObject({
-        name: 'GuardrailIntervention',
-        message: 'Content blocked by guardrails',
+        name: 'ValidationException',
+        message: 'Invalid request parameters: Content policy: medical advice topic is denied',
         statusCode: 400,
       });
     });
@@ -210,8 +210,8 @@ describe('Guardrail Intervention Scenarios', () => {
       bedrockMock.on(RetrieveAndGenerateCommand).rejects(piiGuardrailError);
 
       await expect(knowledgeBase.askKb('Query with john.doe@example.com')).rejects.toMatchObject({
-        name: 'GuardrailIntervention',
-        message: 'Content blocked by guardrails',
+        name: 'ValidationException',
+        message: 'Invalid request parameters: Guardrail intervention: PII entities detected and masked',
         statusCode: 400,
       });
     });

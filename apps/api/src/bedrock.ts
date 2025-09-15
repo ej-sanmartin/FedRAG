@@ -343,9 +343,30 @@ export function createBedrockKnowledgeBase(
  * Utility function to check if an error is a guardrail intervention
  */
 export function isGuardrailIntervention(error: AwsServiceError): boolean {
-  return error.name === 'GuardrailIntervention' || 
-         (typeof error.message === 'string' && error.message.toLowerCase().includes('guardrail')) ||
-         (typeof error.message === 'string' && error.message.toLowerCase().includes('content policy'));
+  // Check for explicit guardrail intervention error name
+  if (error.name === 'GuardrailIntervention') {
+    return true;
+  }
+  
+  // Check for ValidationException with guardrail-related messages
+  if (error.name === 'ValidationException' && typeof error.message === 'string') {
+    const message = error.message.toLowerCase();
+    return message.includes('guardrail') || 
+           message.includes('content policy') ||
+           message.includes('content blocked') ||
+           message.includes('harm category') ||
+           message.includes('denied topic') ||
+           message.includes('inappropriate content');
+  }
+  
+  // Check for other error types with guardrail-related messages
+  if (typeof error.message === 'string') {
+    const message = error.message.toLowerCase();
+    return message.includes('guardrail') || 
+           message.includes('content policy');
+  }
+  
+  return false;
 }
 
 /**
