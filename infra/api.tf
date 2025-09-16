@@ -165,7 +165,6 @@ resource "aws_apigatewayv2_api" "main" {
     allow_origins = [
       "http://localhost:3000",
       "http://localhost:5173",
-      "https://d75yomy6kysc3.cloudfront.net",
       "https://${aws_cloudfront_distribution.web.domain_name}"
     ]
     expose_headers = [
