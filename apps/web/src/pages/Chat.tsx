@@ -23,15 +23,15 @@ const Chat: React.FC = () => {
         // Check if scrollIntoView exists and is a function
         if (typeof messagesEndRef.current.scrollIntoView === 'function') {
           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        } else if (process.env.NODE_ENV !== 'test') {
-          // Only log in non-test environments
+        } else if (process.env.NODE_ENV !== 'test' && import.meta.env.DEV) {
+          // Only log in development environments
           console.warn('scrollIntoView not available on element');
         }
       }
     } catch (error) {
-      // Silently handle scrollIntoView errors in test environments
-      if (process.env.NODE_ENV !== 'test') {
-        
+      // Silently handle scrollIntoView errors in test and production environments
+      if (process.env.NODE_ENV !== 'test' && import.meta.env.DEV) {
+        console.debug('ScrollIntoView error:', error);
       }
     }
   };

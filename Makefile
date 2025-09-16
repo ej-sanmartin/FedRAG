@@ -113,23 +113,6 @@ validate-deployment: ## Validate deployment by running health checks
 	fi
 	./scripts/validate-deployment.sh $(API_URL)
 
-validate-e2e-deployment: ## Run comprehensive end-to-end deployment validation
-	@echo "Running comprehensive end-to-end deployment validation..."
-	@if [ -z "$(API_URL)" ] || [ -z "$(WEB_URL)" ] || [ -z "$(COGNITO_USER_POOL_ID)" ] || [ -z "$(COGNITO_CLIENT_ID)" ] || [ -z "$(COGNITO_DOMAIN)" ]; then \
-		echo "Error: Required environment variables missing"; \
-		echo "Usage: make validate-e2e-deployment API_URL=<url> WEB_URL=<url> COGNITO_USER_POOL_ID=<id> COGNITO_CLIENT_ID=<id> COGNITO_DOMAIN=<domain>"; \
-		echo "Optional: TEST_EMAIL=<email> TEST_PASSWORD=<password> CORPUS_BUCKET=<bucket>"; \
-		exit 1; \
-	fi
-	./scripts/validate-e2e-deployment.sh \
-		--api-url $(API_URL) \
-		--web-url $(WEB_URL) \
-		--cognito-user-pool-id $(COGNITO_USER_POOL_ID) \
-		--cognito-client-id $(COGNITO_CLIENT_ID) \
-		--cognito-domain $(COGNITO_DOMAIN) \
-		$(if $(TEST_EMAIL),--test-email $(TEST_EMAIL)) \
-		$(if $(TEST_PASSWORD),--test-password $(TEST_PASSWORD)) \
-		$(if $(CORPUS_BUCKET),--corpus-bucket $(CORPUS_BUCKET))
 
 # Full Deployment Workflow
 deploy-all: package-lambda build-web deploy-infra ## Build and deploy everything

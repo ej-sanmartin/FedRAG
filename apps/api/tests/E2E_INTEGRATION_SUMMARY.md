@@ -152,7 +152,7 @@ This document summarizes the comprehensive end-to-end integration testing implem
 
 ### Deployment Validation Script
 
-**Location:** `scripts/validate-e2e-deployment.sh`
+**Location:** `scripts/validate-deployment.sh`
 
 **Features:**
 - Real deployment validation against live infrastructure
@@ -163,7 +163,7 @@ This document summarizes the comprehensive end-to-end integration testing implem
 
 **Usage:**
 ```bash
-./scripts/validate-e2e-deployment.sh \
+./scripts/validate-deployment.sh \
   --api-url https://api.example.com \
   --web-url https://web.example.com \
   --cognito-user-pool-id us-east-1_ABC123 \
@@ -200,7 +200,7 @@ cd apps/api
 ### Validating Deployed System
 
 ```bash
-./scripts/validate-e2e-deployment.sh [options]
+./scripts/validate-deployment.sh [API_URL]
 ```
 
 ## Test Results and Reporting

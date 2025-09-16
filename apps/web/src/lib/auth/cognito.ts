@@ -273,7 +273,8 @@ export const logout = (): void => {
   // Redirect to Cognito logout URL
   const logoutParams = new URLSearchParams({
     client_id: config.clientId,
-    redirect_uri: config.logoutUri,
+    logout_uri: config.logoutUri,
+    response_type: 'code',
   });
   
   const logoutUrl = `https://${config.domain}/logout?${logoutParams.toString()}`;

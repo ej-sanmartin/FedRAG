@@ -5,11 +5,50 @@
 
 set -e
 
+# Function to extract JSON value without jq (fallback)
+extract_json_value() {
+    local json="$1"
+    local key="$2"
+    # Simple regex-based extraction (not as robust as jq but works for basic cases)
+    echo "$json" | sed -n "s/.*\"$key\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -1
+}
+
+# Function to check if jq is installed and provide installation instructions
+check_jq() {
+    if ! command -v jq &> /dev/null; then
+        echo "⚠️  Warning: jq is not installed. Using fallback JSON parsing."
+        echo ""
+        echo "For better JSON parsing, install jq using one of the following methods:"
+        echo ""
+        echo "📦 macOS (using Homebrew):"
+        echo "   brew install jq"
+        echo ""
+        echo "📦 Ubuntu/Debian:"
+        echo "   sudo apt-get update && sudo apt-get install jq"
+        echo ""
+        echo "📦 CentOS/RHEL/Fedora:"
+        echo "   sudo yum install jq"
+        echo "   # or for newer versions:"
+        echo "   sudo dnf install jq"
+        echo ""
+        echo "📦 Windows (using Chocolatey):"
+        echo "   choco install jq"
+        echo ""
+        echo "📦 Or download from: https://stedolan.github.io/jq/download/"
+        echo ""
+        return 1
+    fi
+    return 0
+}
+
 # Configuration
 FUNCTION_NAME="fedrag-api"
 REGION="us-east-1"
 
 echo "🚀 Starting Lambda deployment process..."
+
+# Check dependencies (warn but don't exit if jq is missing)
+check_jq || echo "Continuing with fallback JSON parsing..."
 
 # Check if AWS CLI is configured
 if ! aws sts get-caller-identity >/dev/null 2>&1; then
@@ -51,9 +90,15 @@ DEPLOYMENT_RESULT=$(aws lambda update-function-code \
     --output json)
 
 # Extract deployment info
-NEW_VERSION=$(echo "$DEPLOYMENT_RESULT" | jq -r '.Version')
-NEW_SIZE=$(echo "$DEPLOYMENT_RESULT" | jq -r '.CodeSize')
-LAST_MODIFIED=$(echo "$DEPLOYMENT_RESULT" | jq -r '.LastModified')
+if check_jq; then
+    NEW_VERSION=$(echo "$DEPLOYMENT_RESULT" | jq -r '.Version')
+    NEW_SIZE=$(echo "$DEPLOYMENT_RESULT" | jq -r '.CodeSize')
+    LAST_MODIFIED=$(echo "$DEPLOYMENT_RESULT" | jq -r '.LastModified')
+else
+    NEW_VERSION=$(extract_json_value "$DEPLOYMENT_RESULT" "Version")
+    NEW_SIZE=$(extract_json_value "$DEPLOYMENT_RESULT" "CodeSize")
+    LAST_MODIFIED=$(extract_json_value "$DEPLOYMENT_RESULT" "LastModified")
+fi
 
 echo "✅ Deployment successful!"
 echo "📊 New version: $NEW_VERSION"
@@ -89,12 +134,20 @@ TEST_RESULT=$(aws lambda invoke \
     --output json \
     /tmp/lambda-test-output.json)
 
-STATUS_CODE=$(echo "$TEST_RESULT" | jq -r '.StatusCode')
+if check_jq; then
+    STATUS_CODE=$(echo "$TEST_RESULT" | jq -r '.StatusCode')
+else
+    STATUS_CODE=$(extract_json_value "$TEST_RESULT" "StatusCode")
+fi
 
 if [ "$STATUS_CODE" = "200" ]; then
     echo "✅ Function test successful!"
     echo "📋 Test response:"
-    cat /tmp/lambda-test-output.json | jq .
+    if check_jq; then
+        cat /tmp/lambda-test-output.json | jq .
+    else
+        cat /tmp/lambda-test-output.json
+    fi
 else
     echo "⚠️  Function test returned status code: $STATUS_CODE"
     echo "📋 Test response:"
