@@ -338,11 +338,12 @@ Required GitHub Secrets:
 AWS_ROLE_ARN=arn:aws:iam::ACCOUNT:role/GitHubActionsRole
 TF_VAR_PROJECT_NAME=fedrag
 TF_VAR_ENVIRONMENT=production
-TF_VAR_AWS_REGION=us-east-1
 TF_VAR_COGNITO_DOMAIN_PREFIX=fedrag-prod
 TF_VAR_WEB_CALLBACK_URLS=["https://your-domain.com/callback"]
 TF_VAR_WEB_LOGOUT_URLS=["https://your-domain.com/login"]
 ```
+
+> ℹ️ **Region configuration:** The workflows resolve the AWS region from your `infra/terraform.tfvars` settings (defaulting to `us-east-1`) or an override provided via workflow inputs—no separate secret is required.
 
 ## 📚 Corpus Upload and Knowledge Base Sync
 
