@@ -220,21 +220,8 @@ resource "aws_apigatewayv2_route" "health" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-# API Route for OPTIONS (CORS preflight)
-resource "aws_apigatewayv2_route" "options" {
-  api_id             = aws_apigatewayv2_api.main.id
-  route_key          = "OPTIONS /{proxy+}"
-  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-  authorization_type = "NONE"
-}
-
-# API Route for OPTIONS /chat (CORS preflight)
-resource "aws_apigatewayv2_route" "options_chat" {
-  api_id             = aws_apigatewayv2_api.main.id
-  route_key          = "OPTIONS /chat"
-  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-  authorization_type = "NONE"
-}
+# Note: OPTIONS routes removed - API Gateway handles CORS automatically
+# when cors_configuration is present
 
 # API Gateway Stage
 resource "aws_apigatewayv2_stage" "main" {
