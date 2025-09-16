@@ -150,12 +150,12 @@ resource "aws_apigatewayv2_api" "main" {
   cors_configuration {
     allow_credentials = true
     allow_headers = [
-      "authorization",
-      "content-type",
-      "x-amz-date",
-      "x-api-key",
-      "x-amz-security-token",
-      "x-amz-user-agent"
+      "Authorization",
+      "Content-Type",
+      "X-Amz-Date",
+      "X-Api-Key",
+      "X-Amz-Security-Token",
+      "X-Amz-User-Agent"
     ]
     allow_methods = [
       "GET",
