@@ -186,6 +186,29 @@ describe('BedrockKnowledgeBase', () => {
       expect(result.output.text).toBe('');
     });
 
+    it('should allow disabling guardrails for specific requests', async () => {
+      const mockResponse: RetrieveAndGenerateCommandOutput = {
+        output: { text: 'Compliance response without guardrail' },
+        citations: [],
+        guardrailAction: 'NONE',
+        sessionId: 'no-guardrail-session',
+      };
+
+      bedrockMock.on(RetrieveAndGenerateCommand).resolves(mockResponse);
+
+      const result = await knowledgeBase.askKb('Compliance query', undefined, {
+        disableGuardrail: true,
+      });
+
+      expect(result.guardrailAction).toBe('NONE');
+
+      const calls = bedrockMock.commandCalls(RetrieveAndGenerateCommand);
+      expect(
+        calls[0].args[0].input.retrieveAndGenerateConfiguration.knowledgeBaseConfiguration
+          .generationConfiguration.guardrailConfiguration
+      ).toBeUndefined();
+    });
+
     it('should handle empty citations gracefully', async () => {
       const mockResponse: RetrieveAndGenerateCommandOutput = {
         output: { text: 'Response without citations' },

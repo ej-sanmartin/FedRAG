@@ -23,6 +23,10 @@ import type {
   AwsServiceError,
 } from './types.js';
 
+interface AskKbOptions {
+  disableGuardrail?: boolean;
+}
+
 /**
  * Default configuration for Claude Sonnet model parameters
  */
@@ -80,10 +84,11 @@ export class BedrockKnowledgeBase {
    */
   async askKb(
     query: string,
-    sessionId?: string
+    sessionId?: string,
+    options?: AskKbOptions
   ): Promise<BedrockRetrieveAndGenerateResponse> {
     try {
-      const input = this.buildRetrieveAndGenerateInput(query, sessionId);
+      const input = this.buildRetrieveAndGenerateInput(query, sessionId, options);
       const command = new RetrieveAndGenerateCommand(input);
       
       const startTime = Date.now();
@@ -112,8 +117,35 @@ export class BedrockKnowledgeBase {
    */
   private buildRetrieveAndGenerateInput(
     query: string,
-    sessionId?: string
+    sessionId?: string,
+    options?: AskKbOptions
   ): RetrieveAndGenerateCommandInput {
+    const generationConfiguration: any = {
+      inferenceConfig: {
+        textInferenceConfig: {
+          temperature:
+            this.config.generationConfiguration.inferenceConfig.textInferenceConfig
+              .temperature || DEFAULT_MODEL_CONFIG.temperature,
+          topP:
+            this.config.generationConfiguration.inferenceConfig.textInferenceConfig
+              .topP || DEFAULT_MODEL_CONFIG.topP,
+          maxTokens:
+            this.config.generationConfiguration.inferenceConfig.textInferenceConfig
+              .maxTokens || DEFAULT_MODEL_CONFIG.maxTokens,
+        },
+      },
+      promptTemplate: {
+        textPromptTemplate:
+          this.config.generationConfiguration.promptTemplate.textPromptTemplate ||
+          DEFAULT_PROMPT_TEMPLATE,
+      },
+    };
+
+    if (!options?.disableGuardrail) {
+      generationConfiguration.guardrailConfiguration =
+        this.config.generationConfiguration.guardrailConfiguration;
+    }
+
     const input: RetrieveAndGenerateCommandInput = {
       input: {
         text: query,
@@ -123,19 +155,7 @@ export class BedrockKnowledgeBase {
         knowledgeBaseConfiguration: {
           knowledgeBaseId: this.config.knowledgeBaseId,
           modelArn: this.config.modelArn,
-          generationConfiguration: {
-            guardrailConfiguration: this.config.generationConfiguration.guardrailConfiguration,
-            inferenceConfig: {
-              textInferenceConfig: {
-                temperature: this.config.generationConfiguration.inferenceConfig.textInferenceConfig.temperature || DEFAULT_MODEL_CONFIG.temperature,
-                topP: this.config.generationConfiguration.inferenceConfig.textInferenceConfig.topP || DEFAULT_MODEL_CONFIG.topP,
-                maxTokens: this.config.generationConfiguration.inferenceConfig.textInferenceConfig.maxTokens || DEFAULT_MODEL_CONFIG.maxTokens,
-              },
-            },
-            promptTemplate: {
-              textPromptTemplate: this.config.generationConfiguration.promptTemplate.textPromptTemplate || DEFAULT_PROMPT_TEMPLATE,
-            },
-          },
+          generationConfiguration,
           retrievalConfiguration: {
             vectorSearchConfiguration: {
               numberOfResults: this.config.retrievalConfiguration.vectorSearchConfiguration.numberOfResults || DEFAULT_RETRIEVAL_CONFIG.numberOfResults,
@@ -213,12 +233,16 @@ export class BedrockKnowledgeBase {
    * Handle Bedrock service errors with proper categorization
    */
   private handleBedrockError(error: any): AwsServiceError {
+    const originalMessage =
+      typeof error.message === 'string' ? error.message : undefined;
+
     const awsError: AwsServiceError = {
       name: error.name || 'BedrockError',
-      message: error.message || 'Unknown Bedrock service error',
+      message: originalMessage || 'Unknown Bedrock service error',
       code: error.$metadata?.httpStatusCode?.toString() || error.code,
       statusCode: error.$metadata?.httpStatusCode || 500,
       retryable: false,
+      details: originalMessage,
     };
 
     // Categorize errors for appropriate handling

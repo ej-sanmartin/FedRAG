@@ -301,6 +301,7 @@ export interface AwsServiceError {
   code?: string;
   statusCode?: number;
   retryable?: boolean;
+  details?: string;
 }
 
 // ============================================================================
