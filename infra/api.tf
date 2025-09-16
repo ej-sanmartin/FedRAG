@@ -124,6 +124,7 @@ resource "aws_lambda_function" "api" {
       MODEL_ARN         = "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0"
       GUARDRAIL_ID      = aws_bedrock_guardrail.main.guardrail_id
       GUARDRAIL_VERSION = aws_bedrock_guardrail_version.main.version
+      WEB_URL           = "https://${aws_cloudfront_distribution.web.domain_name}"
     }
   }
 

@@ -281,22 +281,55 @@ resource "aws_iam_role" "bedrock_kb_execution_role" {
 }
 
 # Bedrock Knowledge Base
-# Note: These resources require AWS provider version with Bedrock support
-# Bedrock Knowledge Base resources
-# Note: These resources are not supported in AWS provider < 5.31.0 (my local dev environment)
-# Knowledge Base created manually via AWS Console
-# 
-# Uncomment these when using AWS provider 5.31.0+:
-#
+# Note: These resources require AWS provider version with Bedrock support (5.31.0+)
+# Uncomment these when deploying on a device with newer AWS provider:
+
 # resource "aws_bedrock_knowledge_base" "main" {
 #   name     = "${var.project_name}-knowledge-base"
 #   role_arn = aws_iam_role.bedrock_kb_role.arn
-#   ...
+#   
+#   knowledge_base_configuration {
+#     type = "VECTOR"
+#     vector_knowledge_base_configuration {
+#       embedding_model_arn = "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/amazon.titan-embed-text-v2:0"
+#     }
+#   }
+#   
+#   storage_configuration {
+#     type = "OPENSEARCH_SERVERLESS"
+#     opensearch_serverless_configuration {
+#       collection_arn    = aws_opensearchserverless_collection.main.arn
+#       vector_index_name = "fedrag-index"
+#       field_mapping {
+#         vector_field   = "vector"
+#         text_field     = "text"
+#         metadata_field = "metadata"
+#       }
+#     }
+#   }
+#   
+#   tags = {
+#     Name        = "${var.project_name}-knowledge-base"
+#     Environment = var.environment
+#     Purpose     = "Document knowledge base for RAG"
+#   }
 # }
-#
+
 # resource "aws_bedrock_knowledge_base_data_source" "main" {
 #   knowledge_base_id = aws_bedrock_knowledge_base.main.id
-#   ...
+#   name              = "${var.project_name}-s3-data-source"
+#   
+#   data_source_configuration {
+#     type = "S3"
+#     s3_configuration {
+#       bucket_arn = aws_s3_bucket.corpus.arn
+#     }
+#   }
+#   
+#   tags = {
+#     Name        = "${var.project_name}-kb-data-source"
+#     Environment = var.environment
+#   }
 # }
 
 # Data sources for current AWS account and region

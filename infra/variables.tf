@@ -44,7 +44,7 @@ variable "common_tags" {
 
 # Knowledge Base Configuration Variable
 variable "knowledge_base_id" {
-  description = "Bedrock Knowledge Base ID (to be provided after KB creation)"
+  description = "Bedrock Knowledge Base ID (use 'terraform-managed' to create via Terraform, or provide existing KB ID)"
   type        = string
-  default     = "placeholder-kb-id"
+  default     = "8NVMKLDWRL"  # Current manually created KB ID
 }

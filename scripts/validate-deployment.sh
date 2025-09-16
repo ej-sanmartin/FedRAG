@@ -129,8 +129,21 @@ if [ -n "$API_URL" ]; then
 
     # Test CORS headers
     print_status "Testing CORS configuration..."
+    
+    # Try to get web URL from Terraform outputs if available
+    WEB_ORIGIN="https://example.com"
+    if [ -f "infra/terraform.tfstate" ] || [ -f "infra/.terraform/terraform.tfstate" ]; then
+        cd infra 2>/dev/null || true
+        TERRAFORM_WEB_URL=$(terraform output -raw web_url 2>/dev/null || echo "")
+        cd .. 2>/dev/null || true
+        if [ -n "$TERRAFORM_WEB_URL" ]; then
+            WEB_ORIGIN="$TERRAFORM_WEB_URL"
+            print_status "Using web origin from Terraform: $WEB_ORIGIN"
+        fi
+    fi
+    
     CORS_HEADERS=$(curl -s -I -X OPTIONS "$API_URL/chat" \
-        -H "Origin: https://example.com" \
+        -H "Origin: $WEB_ORIGIN" \
         -H "Access-Control-Request-Method: POST" \
         -H "Access-Control-Request-Headers: Content-Type,Authorization" \
         --connect-timeout 10 \
