@@ -361,8 +361,9 @@ main() {
     fi
     
     package_lambda
-    
+
     if [ "$SKIP_WEB" = false ]; then
+        generate_web_env
         build_web
     fi
     
