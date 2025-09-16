@@ -505,6 +505,7 @@ aws logs tail /aws/lambda/fedrag-api --follow
 - Check guardrail configuration
 - Review denied topics list
 - Monitor intervention rates in CloudWatch
+- Compliance-focused prompts that mention personal information but contain no detected PII will automatically retry once without the guardrail configuration after logging the bypass in CloudWatch. This ensures policy questions (e.g., "How should we handle customer PII?") receive answers while true PII requests remain blocked.
 
 ### Getting Help
 
