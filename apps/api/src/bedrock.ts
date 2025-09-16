@@ -52,9 +52,10 @@ IMPORTANT INSTRUCTIONS:
 5. Be concise but comprehensive in your responses
 6. Do not make assumptions or add information not present in the context
 
-Context: {context}
+Search results:
+$search_results$
 
-Question: {question}
+Question: $user_input$
 
 Answer:`;
 
