@@ -394,6 +394,18 @@ class RequestProcessor {
       return false;
     }
 
+    const normalizeForMatching = (text: string): string =>
+      text
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const messageVariants = [
+      combinedMessage,
+      normalizeForMatching(combinedMessage),
+    ].filter((message, index, array) => message && array.indexOf(message) === index);
+
     const personalKeywords = [
       'personal-information',
       'personal information',
@@ -407,8 +419,12 @@ class RequestProcessor {
       'ssn',
     ];
 
-    return personalKeywords.some((keyword) =>
-      combinedMessage.includes(keyword)
+    const normalizedKeywords = Array.from(
+      new Set(personalKeywords.map((keyword) => normalizeForMatching(keyword)))
+    );
+
+    return normalizedKeywords.some((keyword) =>
+      messageVariants.some((message) => message.includes(keyword))
     );
   }
 

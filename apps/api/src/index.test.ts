@@ -355,7 +355,7 @@ describe('Lambda Handler Integration Tests', () => {
       expect(responseBody.sessionId).toBe('test-session-789');
     });
 
-    it('should retry compliant personal information queries without guardrail', async () => {
+    it('should retry compliant personal information queries when guardrail uses personal_information topic', async () => {
       const mockPrePiiResult = {
         originalText: 'How should our support team handle customer PII requests in compliance with policy?',
         maskedText: 'How should our support team handle customer PII requests in compliance with policy?',
@@ -381,7 +381,7 @@ describe('Lambda Handler Integration Tests', () => {
         message: 'Content blocked by guardrails',
         statusCode: 400,
         retryable: false,
-        details: 'Guardrail blocked: personal-information topic detected',
+        details: 'Guardrail blocked: personal_information topic detected',
       } as const;
 
       const mockKbResult = {
