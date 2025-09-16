@@ -52,11 +52,13 @@ AWS_ROLE_ARN=arn:aws:iam::ACCOUNT-ID:role/GitHubActionsRole
 ```
 TF_VAR_PROJECT_NAME=fedrag
 TF_VAR_ENVIRONMENT=production|staging
-TF_VAR_AWS_REGION=us-east-1
 TF_VAR_COGNITO_DOMAIN_PREFIX=fedrag-prod
 TF_VAR_WEB_CALLBACK_URLS=["https://your-domain.com/callback"]
 TF_VAR_WEB_LOGOUT_URLS=["https://your-domain.com/login"]
 ```
+
+> ℹ️ **AWS Region:** Workflows use the region defined in your Terraform configuration (default `us-east-1`) or an override passed
+> through workflow inputs, so it does not need to be stored as a secret.
 
 ## AWS IAM Role Setup
 
@@ -105,8 +107,9 @@ Attach the following managed policies:
 2. Select "Deploy to Production" workflow
 3. Click "Run workflow"
 4. Choose environment (production/staging)
-5. Optionally skip tests for hotfixes
-6. **Manual approval required for production**
+5. (Optional) Override AWS region if different from your Terraform defaults
+6. Optionally skip tests for hotfixes
+7. **Manual approval required for production**
 
 ### Pull Request Process
 1. Create pull request

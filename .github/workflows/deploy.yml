@@ -16,6 +16,11 @@ on:
         options:
           - production
           - staging
+      aws_region:
+        description: 'AWS region for deployment (leave blank to use terraform.tfvars default)'
+        required: false
+        default: ''
+        type: string
       skip_tests:
         description: 'Skip tests and linting'
         required: false
@@ -98,16 +103,37 @@ jobs:
 
     outputs:
       plan-exists: ${{ steps.plan.outputs.plan-exists }}
+      aws-region: ${{ steps.determine-region.outputs.region }}
       
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine AWS region
+        id: determine-region
+        working-directory: infra
+        run: |
+          REGION="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.aws_region || '' }}"
+          if [ -z "$REGION" ]; then
+            REGION="${{ vars.AWS_REGION }}"
+          fi
+          if [ -z "$REGION" ] && [ -f terraform.tfvars ]; then
+            REGION=$(awk -F' *= *' '$1=="aws_region" { gsub(/"/, "", $2); print $2 }' terraform.tfvars | tail -n 1)
+          fi
+          if [ -z "$REGION" ] && [ -f terraform.tfvars.example ]; then
+            REGION=$(awk -F' *= *' '$1=="aws_region" { gsub(/"/, "", $2); print $2 }' terraform.tfvars.example | tail -n 1)
+          fi
+          if [ -z "$REGION" ]; then
+            REGION="us-east-1"
+          fi
+          echo "AWS_REGION=$REGION" >> $GITHUB_ENV
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-TerraformPlan
 
       - name: Setup Terraform
@@ -121,7 +147,7 @@ jobs:
           cat > terraform.tfvars << EOF
           project_name = "${{ secrets.TF_VAR_PROJECT_NAME }}"
           environment = "${{ inputs.environment || 'production' }}"
-          aws_region = "${{ secrets.TF_VAR_AWS_REGION }}"
+          aws_region = "${{ env.AWS_REGION }}"
           cognito_domain_prefix = "${{ secrets.TF_VAR_COGNITO_DOMAIN_PREFIX }}"
           web_callback_urls = ${{ secrets.TF_VAR_WEB_CALLBACK_URLS }}
           web_logout_urls = ${{ secrets.TF_VAR_WEB_LOGOUT_URLS }}
@@ -188,7 +214,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [terraform-plan, approval]
     if: always() && needs.terraform-plan.outputs.plan-exists == 'true' && needs.approval.result == 'success'
-    
+
     permissions:
       contents: read
       id-token: write
@@ -197,6 +223,10 @@ jobs:
       api-url: ${{ steps.outputs.outputs.api-url }}
       web-url: ${{ steps.outputs.outputs.web-url }}
       kb-id: ${{ steps.outputs.outputs.kb-id }}
+      aws-region: ${{ env.AWS_REGION }}
+
+    env:
+      AWS_REGION: ${{ needs.terraform-plan.outputs.aws-region }}
       
     steps:
       - name: Checkout code
@@ -206,7 +236,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-TerraformApply
 
       - name: Setup Terraform
@@ -227,7 +257,7 @@ jobs:
           cat > terraform.tfvars << EOF
           project_name = "${{ secrets.TF_VAR_PROJECT_NAME }}"
           environment = "${{ inputs.environment || 'production' }}"
-          aws_region = "${{ secrets.TF_VAR_AWS_REGION }}"
+          aws_region = "${{ env.AWS_REGION }}"
           cognito_domain_prefix = "${{ secrets.TF_VAR_COGNITO_DOMAIN_PREFIX }}"
           web_callback_urls = ${{ secrets.TF_VAR_WEB_CALLBACK_URLS }}
           web_logout_urls = ${{ secrets.TF_VAR_WEB_LOGOUT_URLS }}
@@ -268,17 +298,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [terraform-apply]
     if: always() && needs.terraform-apply.result == 'success'
-    
+
     permissions:
       contents: read
       id-token: write
+
+    env:
+      AWS_REGION: ${{ needs.terraform-apply.outputs.aws-region }}
       
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-FrontendDeploy
 
       - name: Download build artifacts
@@ -304,6 +337,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [terraform-apply, deploy-frontend]
     if: always() && needs.terraform-apply.result == 'success' && needs.deploy-frontend.result == 'success'
+
+    env:
+      AWS_REGION: ${{ needs.terraform-apply.outputs.aws-region }}
     
     steps:
       - name: Checkout code
@@ -313,7 +349,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Validation
 
       - name: Run deployment validation
@@ -344,17 +380,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [terraform-apply, deploy-frontend, post-deployment]
     if: failure() && needs.terraform-apply.result == 'success'
-    
+
     permissions:
       contents: read
       id-token: write
+
+    env:
+      AWS_REGION: ${{ needs.terraform-apply.outputs.aws-region }}
       
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Rollback
 
       - name: Notify of rollback
