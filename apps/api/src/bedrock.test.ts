@@ -381,6 +381,37 @@ describe('Factory function and utilities', () => {
       expect(kb).toBeInstanceOf(BedrockKnowledgeBase);
     });
 
+    it('should include Bedrock placeholders in the default prompt template', async () => {
+      bedrockMock.reset();
+
+      const kb = createBedrockKnowledgeBase(
+        'placeholder-kb',
+        'placeholder-model-arn',
+        'placeholder-guardrail',
+        '1'
+      );
+
+      const mockResponse: RetrieveAndGenerateCommandOutput = {
+        output: { text: 'Placeholder response [1].' },
+        citations: [],
+        sessionId: 'placeholder-session-id',
+        guardrailAction: 'NONE',
+      };
+
+      bedrockMock.on(RetrieveAndGenerateCommand).resolves(mockResponse);
+
+      await kb.askKb('How are placeholders handled?');
+
+      const calls = bedrockMock.commandCalls(RetrieveAndGenerateCommand);
+      const template =
+        calls[0].args[0].input.retrieveAndGenerateConfiguration
+          ?.knowledgeBaseConfiguration?.generationConfiguration?.promptTemplate
+          ?.textPromptTemplate;
+
+      expect(template).toContain('$search_results$');
+      expect(template).toContain('$user_input$');
+    });
+
     it('should throw error for invalid configuration in factory', () => {
       expect(() => {
         createBedrockKnowledgeBase('', 'model-arn', 'guardrail', '1');
