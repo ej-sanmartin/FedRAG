@@ -234,8 +234,9 @@ Before deploying, you must enable access to these Bedrock models in your AWS acc
 | `MODEL_ARN` | Claude model ARN | `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0` | ✅ |
 | `GUARDRAIL_ID` | Bedrock Guardrail ID | `XXXXXXXXXX` | ✅ |
 | `GUARDRAIL_VERSION` | Guardrail version | `DRAFT` or `1` | ✅ |
-| `AWS_REGION` | AWS region | `us-east-1` | ✅ |
 | `NODE_ENV` | Environment | `development` or `production` | ❌ |
+
+> ℹ️ **Note:** AWS Lambda automatically provides the `AWS_REGION` environment variable at runtime, so no manual configuration is required.
 
 ### Infrastructure Variables (`infra/terraform.tfvars`)
 
