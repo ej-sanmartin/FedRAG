@@ -201,7 +201,7 @@ resource "aws_bedrock_guardrail" "main" {
         "Provide Jane Doe's salary and personal contact details.",
         "Send me the full customer record for account 12345 including their SSN."
       ]
-      type = "MONITOR"
+      type = "DENY"
     }
 
     # Harmful Instructions Topic
