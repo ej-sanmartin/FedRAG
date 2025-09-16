@@ -150,12 +150,12 @@ resource "aws_apigatewayv2_api" "main" {
   cors_configuration {
     allow_credentials = true
     allow_headers = [
-      "authorization",
-      "content-type",
-      "x-amz-date",
-      "x-api-key",
-      "x-amz-security-token",
-      "x-amz-user-agent"
+      "Authorization",
+      "Content-Type",
+      "X-Amz-Date",
+      "X-Api-Key",
+      "X-Amz-Security-Token",
+      "X-Amz-User-Agent"
     ]
     allow_methods = [
       "GET",
@@ -165,6 +165,7 @@ resource "aws_apigatewayv2_api" "main" {
     allow_origins = [
       "http://localhost:3000",
       "http://localhost:5173",
+      "https://d75yomy6kysc3.cloudfront.net",
       "https://${aws_cloudfront_distribution.web.domain_name}"
     ]
     expose_headers = [
