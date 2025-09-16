@@ -19,6 +19,11 @@ import Chat from '../pages/Chat';
 import { apiCall, chatQuery, handleApiError } from '../lib/api/client';
 import * as cognitoAuth from '../lib/auth/cognito';
 
+// Ensure scrollIntoView is mocked
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
 // Mock the API client
 vi.mock('../lib/api/client', () => ({
   apiCall: vi.fn(),
@@ -691,7 +696,7 @@ describe('Frontend End-to-End Integration Tests', () => {
         expect(chatQuery).toHaveBeenCalled();
       });
 
-      const newSessionId = (chatQuery as any).mock.calls[0][0].sessionId;
+      const newSessionId = (chatQuery as unknown).mock.calls[0][0].sessionId;
       expect(newSessionId).toBe(undefined); // New instance starts with undefined sessionId
     });
   });

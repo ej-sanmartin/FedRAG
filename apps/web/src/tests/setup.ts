@@ -73,7 +73,16 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 }))
 
 // Mock scrollIntoView for DOM elements
-Element.prototype.scrollIntoView = vi.fn()
+Element.prototype.scrollIntoView = vi.fn().mockImplementation(() => {
+  // Mock implementation that does nothing but doesn't throw
+})
+
+// Also mock it on HTMLElement specifically
+if (typeof HTMLElement !== 'undefined') {
+  HTMLElement.prototype.scrollIntoView = vi.fn().mockImplementation(() => {
+    // Mock implementation that does nothing but doesn't throw
+  })
+}
 
 // Suppress console warnings in tests
 const originalConsoleWarn = console.warn
