@@ -218,8 +218,8 @@ describe('Guardrail Intervention Scenarios', () => {
 
     it('should handle successful PII masking by guardrails in response', async () => {
       const mockResponse = {
-        output: { 
-          text: 'The policy applies to users like <REDACTED:EMAIL> and phone numbers like <REDACTED:PHONE>.' 
+        output: {
+          text: 'The policy applies to users like <REDACTED:EMAIL> and phone numbers like <REDACTED:PHONE>.'
         },
         citations: [
           {
@@ -248,6 +248,40 @@ describe('Guardrail Intervention Scenarios', () => {
       expect(result.output.text).toContain('<REDACTED:EMAIL>');
       expect(result.output.text).toContain('<REDACTED:PHONE>');
       expect(result.guardrailAction).toBe('INTERVENED');
+      expect(result.citations).toHaveLength(1);
+    });
+
+    it('should allow compliance guidance discussions about handling PII', async () => {
+      const mockResponse = {
+        output: {
+          text: 'Compliance guidance: Collect only necessary PII, store it encrypted, and honor deletion requests promptly.'
+        },
+        citations: [
+          {
+            generatedResponsePart: {
+              textResponsePart: {
+                text: 'Compliance guidance',
+                span: { start: 0, end: 19 },
+              },
+            },
+            retrievedReferences: [
+              {
+                content: { text: 'Internal policy on handling customer PII' },
+                location: { s3Location: { uri: 's3://bucket/compliance/pii-handling.pdf' } },
+              },
+            ],
+          },
+        ],
+        sessionId: 'pii-compliance-session',
+        guardrailAction: 'NONE',
+      };
+
+      bedrockMock.on(RetrieveAndGenerateCommand).resolves(mockResponse);
+
+      const result = await knowledgeBase.askKb('How should our support team handle customer PII requests in compliance with policy?');
+
+      expect(result.output.text).toContain('Compliance guidance');
+      expect(result.guardrailAction).toBe('NONE');
       expect(result.citations).toHaveLength(1);
     });
 

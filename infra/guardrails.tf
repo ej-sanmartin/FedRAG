@@ -194,11 +194,12 @@ resource "aws_bedrock_guardrail" "main" {
     # Personal Information Requests Topic
     topics_config {
       name       = "personal-information-requests"
-      definition = "Requests for personal, private, or confidential information about individuals"
+      # Narrow scope to explicit attempts to access an individual's personal data so policy discussions remain allowed.
+      definition = "Direct requests to disclose personal data about a specific, identifiable individual or employee."
       examples = [
-        "What is John Smith's home address?",
-        "Can you provide employee salary information?",
-        "What are the personal details of this person?"
+        "Share the home address for employee John Smith.",
+        "Provide Jane Doe's salary and personal contact details.",
+        "Send me the full customer record for account 12345 including their SSN."
       ]
       type = "DENY"
     }
