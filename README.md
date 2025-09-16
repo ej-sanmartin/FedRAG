@@ -249,38 +249,82 @@ Before deploying, you must enable access to these Bedrock models in your AWS acc
 
 ## 🚀 Deployment Guide
 
-### Development Deployment
+> **Full workflow:** `make deploy-infra` → `make package-lambda` → `make master-deploy` → `./scripts/upload-corpus.sh <bucket> <dir>` → `make validate-deployment API_URL=<api-url>`
 
-1. **Local Development**:
-   ```bash
-   make dev-setup
-   pnpm dev
-   ```
+### Step 1: Deploy Infrastructure
 
-2. **Build and Test**:
-   ```bash
-   make test
-   make package-lambda
-   make build-web
-   ```
+Provision the AWS resources (Cognito, API Gateway, Lambda, S3, etc.) before shipping any application code.
 
-### Production Deployment
+```bash
+# Deploy all Terraform-managed infrastructure
+make deploy-infra
 
-1. **Infrastructure First**:
-   ```bash
-   make deploy-infra
-   # Review and approve the Terraform plan
-   ```
+# Review and approve the Terraform plan when prompted
+```
 
-2. **Upload Corpus**:
-   ```bash
-   make upload-corpus BUCKET_NAME=<bucket-name> CORPUS_DIR=./corpus
-   ```
+After Terraform completes, capture the outputs (API Gateway URL, web distribution URL, Cognito IDs, S3 bucket names) and update your `.env` files as needed.
 
-3. **Validate Deployment**:
-   ```bash
-   make validate-deployment API_URL=<api-gateway-url>
-   ```
+### Step 2: Package the Lambda API
+
+Package the backend Lambda so it is ready to upload. This command installs dependencies, builds the handler, and creates `apps/api/lambda-deployment.zip`.
+
+```bash
+make test              # Optional: run the full test suite first
+make package-lambda    # Generates the Lambda deployment bundle
+```
+
+You can inspect the resulting ZIP at `apps/api/lambda-deployment.zip` if you need to verify contents before deploying.
+
+### Step 3: Orchestrate Deployment with the Master Script
+
+Run the one-stop deployment pipeline once your infrastructure and package are ready. The master script installs dependencies, (re)packages the Lambda, deploys infrastructure, uploads the Lambda bundle, optionally builds and syncs the web app, and runs a CORS smoke test.
+
+```bash
+make master-deploy
+```
+
+Additional options:
+
+- `make master-deploy-fast` – Skip the pnpm test run.
+- `make master-deploy-lambda-only` – Deploy just the Lambda function and run the CORS smoke test.
+- `./scripts/master-deploy.sh --skip-tests --skip-infra --skip-web` – Call the script directly with fine-grained flags.
+
+The command surfaces final URLs and next steps, making it ideal for production rollouts.
+
+### Step 4: Upload Knowledge Base Corpus
+
+Once infrastructure is in place, push your document set to the Bedrock Knowledge Base bucket. You can continue using `make upload-corpus` or call the helper script directly.
+
+```bash
+# Using the helper script (after deployment)
+./scripts/upload-corpus.sh \
+  "$(cd infra && terraform output -raw corpus_bucket_name)" \
+  ./corpus
+
+# Equivalent Make target
+make upload-corpus \
+  BUCKET_NAME="$(cd infra && terraform output -raw corpus_bucket_name)" \
+  CORPUS_DIR=./corpus
+```
+
+The script validates your AWS credentials, uploads supported file types, and reminds you to monitor the Knowledge Base sync job.
+
+### Step 5: Post-Deployment Validation & CORS Checks
+
+Verify that the deployed API accepts requests from the web origin and that the health checks succeed. The CORS test script exercises OPTIONS/GET/POST flows, while the validation Make target runs the broader post-deploy script.
+
+```bash
+# Check CORS headers and auth behaviour
+./scripts/test-cors.sh \
+  "$(cd infra && terraform output -raw api_gateway_url)" \
+  "$(cd infra && terraform output -raw web_url)"
+
+# Run end-to-end smoke tests (health, configuration, etc.)
+make validate-deployment \
+  API_URL="$(cd infra && terraform output -raw api_gateway_url)"
+```
+
+If any checks fail, review the script output for troubleshooting tips and inspect CloudWatch logs for deeper diagnostics.
 
 ### CI/CD Deployment
 
