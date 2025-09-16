@@ -9,7 +9,7 @@
  */
 
 import type {
-  APIGatewayProxyEvent,
+  APIGatewayProxyEventV2,
   APIGatewayProxyResult,
   Context,
 } from "aws-lambda";
@@ -441,41 +441,74 @@ class RequestProcessor {
 }
 
 /**
+ * Retrieve a header value from the event in a case-insensitive manner
+ */
+function getHeaderValue(
+  headers: APIGatewayProxyEventV2["headers"],
+  name: string
+): string | undefined {
+  if (!headers) {
+    return undefined;
+  }
+
+  const lowerName = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === lowerName) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Get the appropriate CORS origin based on the request
  */
-function getCorsOrigin(event: APIGatewayProxyEvent, allowedOrigins: string[]): string {
-  const requestOrigin = event.headers.origin || event.headers.Origin;
-  
+function getCorsOrigin(
+  event: APIGatewayProxyEventV2,
+  allowedOrigins: string[]
+): string {
+  const requestOrigin = getHeaderValue(event.headers, "origin");
+  const defaultOrigin =
+    allowedOrigins.find((origin) => !origin.includes("localhost")) ??
+    allowedOrigins[0] ??
+    "*";
+
   // If no origin in request, use the first allowed origin (for non-browser requests)
   if (!requestOrigin) {
-    return allowedOrigins.find(origin => !origin.includes('localhost')) || allowedOrigins[0] || "*";
+    return defaultOrigin;
   }
-  
+
   // Check if the request origin is in our allowed list
   if (allowedOrigins.includes(requestOrigin)) {
     return requestOrigin;
   }
-  
+
   // For development, allow localhost origins
-  if (requestOrigin.includes('localhost')) {
+  if (requestOrigin.includes("localhost")) {
     return requestOrigin;
   }
-  
+
   // Default to the first non-localhost origin
-  return allowedOrigins.find(origin => !origin.includes('localhost')) || allowedOrigins[0] || "*";
+  return defaultOrigin;
 }
 
 /**
  * Validate and parse request body
  */
-function parseRequest(event: APIGatewayProxyEvent): ChatRequest {
+function parseRequest(event: APIGatewayProxyEventV2): ChatRequest {
   if (!event.body) {
     throw new Error("Request body is required");
   }
 
+  const body =
+    event.isBase64Encoded && event.body
+      ? Buffer.from(event.body, "base64").toString("utf-8")
+      : event.body;
+
   let parsedBody: any;
   try {
-    parsedBody = JSON.parse(event.body);
+    parsedBody = JSON.parse(body);
   } catch (error) {
     throw new Error("Invalid JSON in request body");
   }
@@ -564,7 +597,7 @@ function createSuccessResponse(
  * Main Lambda handler
  */
 export async function handler(
-  event: APIGatewayProxyEvent,
+  event: APIGatewayProxyEventV2,
   context: Context
 ): Promise<APIGatewayProxyResult> {
   const correlationId = randomUUID();
@@ -587,20 +620,33 @@ export async function handler(
 
   const corsOrigin = getCorsOrigin(event, config.allowedOrigins);
 
+  const rawMethod =
+    event.requestContext?.http?.method ??
+    (event as any).httpMethod ??
+    (event.requestContext as any)?.httpMethod ??
+    "";
+  const method = rawMethod ? rawMethod.toUpperCase() : "";
+  const path =
+    event.rawPath ??
+    event.requestContext?.http?.path ??
+    (event as any).path ??
+    (event.requestContext as any)?.path ??
+    "/";
+
   logger.info("Lambda invocation started", {
     requestId: context.awsRequestId,
-    httpMethod: event.httpMethod,
-    path: event.path,
-    userAgent: event.headers["User-Agent"],
+    httpMethod: method,
+    path,
+    userAgent: getHeaderValue(event.headers, "user-agent"),
     corsOrigin,
   });
 
   // Handle CORS preflight requests FIRST, before any other validation
-  if (event.httpMethod === "OPTIONS") {
+  if (method === "OPTIONS") {
     logger.info("Handling OPTIONS preflight request", {
-      path: event.path,
+      path,
       origin: corsOrigin,
-      requestOrigin: event.headers.origin || event.headers.Origin,
+      requestOrigin: getHeaderValue(event.headers, "origin"),
     });
 
     return {
@@ -620,7 +666,7 @@ export async function handler(
 
   try {
     // Validate HTTP method for non-OPTIONS requests
-    if (event.httpMethod !== "POST" && event.httpMethod !== "GET") {
+    if (method !== "POST" && method !== "GET") {
       return createErrorResponse(
         "MethodNotAllowed",
         "Only POST and GET methods are allowed",
@@ -631,8 +677,8 @@ export async function handler(
     }
 
     // Handle GET requests (health check)
-    if (event.httpMethod === "GET") {
-      if (event.path === "/health") {
+    if (method === "GET") {
+      if (path === "/health") {
         return createSuccessResponse(
           {
             status: "healthy",
