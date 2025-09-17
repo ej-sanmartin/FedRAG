@@ -1,5 +1,7 @@
 # FedRag - Privacy-First RAG Assistant
 
+![Preview UI of Deployed FedRAG](assets/fedrag-ui.png "Preview UI of Deployed FedRAG")
+
 A privacy-first RAG (Retrieval-Augmented Generation) assistant built on AWS infrastructure that provides secure policy question-answering capabilities. The system combines React+Vite frontend with AWS Bedrock Knowledge Bases, implementing comprehensive PII protection through Bedrock Guardrails and Amazon Comprehend.
 
 ## 🏗️ Architecture Overview
