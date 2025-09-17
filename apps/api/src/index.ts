@@ -27,6 +27,7 @@ import {
   type GuardrailDefinitions,
   type GuardrailSelectionResult,
 } from "./safety/guardrailRouting.js";
+import { emitRequestTelemetry } from "./telemetry/log.js";
 import type {
   ChatRequest,
   ChatResponse,
@@ -189,10 +190,12 @@ class RequestProcessor {
   private logger: Logger;
   private metrics: PerformanceMetrics;
   private guardrails: GuardrailDefinitions;
+  private correlationId: string;
 
   constructor(config: LambdaConfig, correlationId: string) {
     this.piiService = new PiiService();
     this.guardrails = config.guardrails;
+    this.correlationId = correlationId;
     const bedrockClient = createBedrockKnowledgeBase(
       config.knowledgeBaseId,
       config.modelArn,
@@ -212,6 +215,10 @@ class RequestProcessor {
       contextRetryCount: 0,
       contextCacheHit: false,
       contextDegraded: false,
+      blockedByGuardrail: false,
+      guardrailId: this.guardrails.default.guardrailId,
+      usedComplianceGuardrail: false,
+      guardrailTopics: [],
     };
   }
 
@@ -237,6 +244,11 @@ class RequestProcessor {
         request.query,
         contextSnippets
       );
+      this.metrics.guardrailId =
+        guardrailSelection.guardrail.guardrailId ||
+        this.guardrails.default.guardrailId;
+      this.metrics.usedComplianceGuardrail = guardrailSelection.usedCompliance;
+      this.metrics.guardrailTopics = [];
 
       // Step 4: Query knowledge base with selected guardrail
       const kbResult = await this.queryKnowledgeBase(
@@ -257,9 +269,13 @@ class RequestProcessor {
         postPiiResult,
         request.query
       );
+      if (response.guardrailAction === "INTERVENED") {
+        this.metrics.blockedByGuardrail = true;
+      }
 
       this.metrics.totalLatency = Date.now() - startTime;
       this.logMetrics();
+      this.emitTelemetry(response);
 
       this.logger.info(
         "Request processing completed successfully",
@@ -275,6 +291,7 @@ class RequestProcessor {
       return response;
     } catch (error) {
       this.metrics.totalLatency = Date.now() - startTime;
+      this.emitTelemetry();
       this.handleProcessingError(error);
       throw error;
     }
@@ -472,8 +489,15 @@ class RequestProcessor {
       this.metrics.knowledgeBaseRetries = kbResult.metadata.retryCount;
       this.metrics.knowledgeBaseCacheHit = kbResult.metadata.cacheHit;
       this.metrics.knowledgeBaseDegraded = kbResult.metadata.degraded;
+      this.metrics.blockedByGuardrail =
+        kbResult.guardrailAction === "INTERVENED";
+      if (!this.metrics.blockedByGuardrail) {
+        this.metrics.guardrailTopics = [];
+      }
 
       if (kbResult.metadata.degraded) {
+        this.metrics.blockedByGuardrail = false;
+        this.metrics.guardrailTopics = [];
         this.logger.warn(
           "Knowledge base query degraded; returning unsourced response",
           {
@@ -564,6 +588,10 @@ class RequestProcessor {
         this.metrics.knowledgeBaseRetries = awsError.retries;
         this.metrics.knowledgeBaseCacheHit = false;
         this.metrics.knowledgeBaseDegraded = false;
+        this.metrics.blockedByGuardrail = true;
+        this.addGuardrailTopics(
+          this.extractGuardrailTopics(awsError.details || awsError.message)
+        );
 
         return {
           output: {
@@ -572,6 +600,12 @@ class RequestProcessor {
           citations: [],
           guardrailAction: "INTERVENED" as const,
           sessionId: sessionId || `session-${Date.now()}`,
+          metadata: {
+            retryCount: awsError.retries ?? 0,
+            cacheHit: false,
+            degraded: false,
+          },
+          error: awsError,
         };
       }
 
@@ -664,6 +698,129 @@ class RequestProcessor {
           ? postPiiResult.maskedText
           : undefined,
     };
+  }
+
+  private emitTelemetry(response?: ChatResponse): void {
+    try {
+      const guardrailIdCandidate =
+        this.metrics.guardrailId && this.metrics.guardrailId.trim().length > 0
+          ? this.metrics.guardrailId
+          : this.guardrails.default.guardrailId || undefined;
+
+      const topicHits = Array.from(
+        new Set(
+          (this.metrics.guardrailTopics ?? [])
+            .map((topic) => topic.trim())
+            .filter((topic) => topic.length > 0)
+        )
+      );
+
+      emitRequestTelemetry({
+        correlationId: this.correlationId,
+        guardrailId: guardrailIdCandidate,
+        isCompliance: Boolean(this.metrics.usedComplianceGuardrail),
+        blockedByGuardrail:
+          response?.guardrailAction === "INTERVENED" ||
+          Boolean(this.metrics.blockedByGuardrail),
+        topicHits,
+        piiEntitiesDetected: this.metrics.entitiesDetected,
+        kbDegraded: Boolean(
+          this.metrics.knowledgeBaseDegraded || this.metrics.contextDegraded
+        ),
+        retryCountKb: this.metrics.contextRetryCount ?? 0,
+        retryCountInvoke: this.metrics.knowledgeBaseRetries ?? 0,
+        latencyMsTotal: this.metrics.totalLatency ?? 0,
+        latencyMsKb: this.metrics.contextRetrievalLatency,
+        latencyMsInvoke: this.metrics.knowledgeBaseLatency,
+      });
+    } catch (error) {
+      this.logger.warn("Failed to emit request telemetry", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private addGuardrailTopics(topics: string[]): void {
+    if (!topics || topics.length === 0) {
+      return;
+    }
+
+    const existing = new Set(this.metrics.guardrailTopics ?? []);
+    for (const topic of topics) {
+      const normalized = topic.trim().toLowerCase();
+      if (normalized.length === 0) {
+        continue;
+      }
+      existing.add(normalized);
+    }
+    this.metrics.guardrailTopics = Array.from(existing);
+  }
+
+  private extractGuardrailTopics(details?: string): string[] {
+    if (!details) {
+      return [];
+    }
+
+    const normalized = details.toLowerCase();
+    const topics = new Set<string>();
+
+    const collect = (fragment: string | undefined) => {
+      if (!fragment) {
+        return;
+      }
+
+      fragment
+        .split(/[,;]| and /g)
+        .map((value) =>
+          value
+            .replace(
+              /\b(topic|topics|detected|flagged|blocked|hit|triggered|guardrail|policy)\b/g,
+              ""
+            )
+            .replace(/due to/g, "")
+            .replace(/because of/g, "")
+            .replace(/[^a-z0-9\-/ ]/g, " ")
+            .trim()
+        )
+        .forEach((value) => {
+          if (!value) {
+            return;
+          }
+
+          let candidate = value;
+          if (candidate.includes(" - ")) {
+            candidate = candidate.split(" - ").pop() ?? candidate;
+          }
+          if (candidate.includes("/")) {
+            const parts = candidate.split("/");
+            candidate = parts[parts.length - 1] ?? candidate;
+          }
+
+          const cleaned = candidate.replace(/\s+/g, " ").trim();
+          if (cleaned) {
+            topics.add(cleaned);
+          }
+        });
+    };
+
+    for (const match of normalized.matchAll(
+      /topics?(?: detected| hit| flagged| found| triggered)?[:\s]+([a-z0-9\-\/ ,]+)/g
+    )) {
+      collect(match[1]);
+    }
+
+    for (const match of normalized.matchAll(/([a-z0-9][a-z0-9\-\/ ]+?)\s+topic(?:s)?/g)) {
+      collect(match[1]);
+    }
+
+    if (!topics.size) {
+      const colonIndex = normalized.indexOf(":");
+      if (colonIndex !== -1) {
+        collect(normalized.slice(colonIndex + 1));
+      }
+    }
+
+    return Array.from(topics);
   }
 
   /**
