@@ -12,6 +12,18 @@ The system implements a serverless microservices pattern with multi-layer securi
 - **Security**: Bedrock Guardrails + Amazon Comprehend PII Detection
 - **Infrastructure**: Terraform + AWS (Cognito, API Gateway, OpenSearch Serverless, S3)
 
+### Compliance-Aware Guardrail Routing
+
+Incoming questions are routed between two Bedrock guardrail configurations. The handler first pulls lightweight context from the knowledge base, then uses a lexical compliance heuristic combined with a Comprehend scan to determine whether the dedicated compliance rail can be applied safely.【F:apps/api/src/safety/guardrailRouting.ts†L1-L151】【F:apps/api/src/index.ts†L339-L456】 Prompts that look like compliance guidance and do not contain medium/high risk entities are answered with the compliance guardrail to preserve helpfulness, while any detected sensitive entities or detector failures automatically fall back to the default guardrail and are logged for follow-up.【F:apps/api/src/safety/guardrailRouting.ts†L104-L151】【F:apps/api/src/index.ts†L415-L456】
+
+### Knowledge Base Resiliency & Degraded Answers
+
+The Lambda wraps Bedrock with layered resiliency. It keeps both context snippets and generated answers in an in-memory LRU cache that is sized and aged via environment knobs, and it retries Bedrock calls with configurable exponential backoff before surfacing throttling back to the client.【F:apps/api/src/services/knowledgeBase.ts†L163-L347】【F:apps/api/src/bedrock.ts†L90-L160】 When Bedrock or the knowledge base still throttle after the retries, the handler returns an explicitly marked degraded, unsourced response so the user gets immediate guidance while telemetry shows that the answer lacked citations.【F:apps/api/src/services/knowledgeBase.ts†L299-L347】【F:apps/api/src/index.ts†L339-L518】
+
+### Telemetry Expectations
+
+Every invocation emits structured telemetry that captures the chosen guardrail, compliance routing decisions, knowledge base degradation flags, retry counts, latency buckets, and a rolling twelve-week aggregate for each guardrail configuration.【F:apps/api/src/index.ts†L703-L735】【F:apps/api/src/telemetry/log.ts†L1-L150】 Operations teams can rely on these CloudWatch logs to monitor compliance routing effectiveness, guardrail interventions, and degradation rates over time without needing to join across disparate log streams.【F:apps/api/src/telemetry/log.ts†L44-L154】
+
 ## 📁 Project Structure
 
 ```
@@ -232,13 +244,21 @@ Before deploying, you must enable access to these Bedrock models in your AWS acc
 |----------|-------------|---------|----------|
 | `KB_ID` | Bedrock Knowledge Base ID | `XXXXXXXXXX` | ✅ |
 | `MODEL_ARN` | Claude model ARN | `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0` | ✅ |
-| `GR_DEFAULT_ID` | Primary Bedrock Guardrail ID | `XXXXXXXXXX` | ✅ |
-| `GR_DEFAULT_VERSION` | Primary guardrail version | `DRAFT` or `1` | ✅ |
-| `GR_COMPLIANCE_ID` | Compliance guardrail ID (used for compliant PII guidance) | `YYYYYYYYYY` | ✅ |
-| `GR_COMPLIANCE_VERSION` | Compliance guardrail version | `DRAFT` or `1` | ✅ |
+| `GR_DEFAULT_ID` | Base guardrail used for all traffic and as the fallback when compliance checks fail | `gr-xxxxxxxx` | ✅ |
+| `GR_DEFAULT_VERSION` | Version of the base guardrail configuration | `1` | ✅ |
+| `GR_COMPLIANCE_ID` | Secondary guardrail for compliance guidance; used only when routing heuristics allow it | `gr-yyyyyyyy` | ✅ (recommended) |
+| `GR_COMPLIANCE_VERSION` | Version of the compliance guardrail | `1` | ✅ (recommended) |
+| `CACHE_MAX_ENTRIES` (`KB_CACHE_SIZE`) | LRU cache capacity for stored context and answers. Set to `0` to disable caching. | `64` | ❌ |
+| `CACHE_TTL_SECONDS` (`KB_CACHE_TTL_MS`) | Cache retention window. Provide seconds (or set `KB_CACHE_TTL_MS` directly in milliseconds). | `120` | ❌ |
+| `KB_CACHE_ENABLED` | Explicit switch for the knowledge base cache layer. | `true` | ❌ |
+| `KB_MAX_RETRIES` | Max retry attempts against Bedrock before returning a degraded response. | `4` | ❌ |
+| `KB_BACKOFF_BASE_MS` | Initial delay for exponential backoff during throttling. | `200` | ❌ |
+| `KB_BACKOFF_MAX_MS` | Maximum backoff delay applied across retries. | `2000` | ❌ |
 | `NODE_ENV` | Environment | `development` or `production` | ❌ |
 
 > ℹ️ **Note:** AWS Lambda automatically provides the `AWS_REGION` environment variable at runtime, so no manual configuration is required.
+>
+> 💡 **Deployment tip:** The handler reads the `KB_*` names at runtime. If your secret management prefers the friendlier `CACHE_MAX_ENTRIES` or `CACHE_TTL_SECONDS` keys, map them into the Lambda's `KB_CACHE_SIZE` and `KB_CACHE_TTL_MS` values during deployment so the cache receives the intended settings.【F:apps/api/src/services/knowledgeBase.ts†L163-L223】
 
 ### Infrastructure Variables (`infra/terraform.tfvars`)
 
@@ -252,6 +272,12 @@ Before deploying, you must enable access to these Bedrock models in your AWS acc
 ## 🚀 Deployment Guide
 
 > **Full workflow:** `make deploy-infra` → `make package-lambda` → `make master-deploy` → `./scripts/upload-corpus.sh <bucket> <dir>` → `make validate-deployment API_URL=<api-url>`
+
+### Resiliency Deployment Considerations
+
+- **Cap Lambda concurrency**: Set a reserved concurrency (for example via `aws lambda put-function-concurrency --function-name fedrag-api --reserved-concurrent-executions 10`) that matches your Bedrock guardrail throughput so the new degraded-answer path only triggers under genuine Bedrock throttling rather than local saturation.【F:apps/api/src/services/knowledgeBase.ts†L299-L347】【F:apps/api/src/index.ts†L339-L518】 Adjust the cap as Bedrock quotas change.
+- **Introduce burst queueing**: For traffic spikes that would otherwise overflow the reserved concurrency, front the API with an SQS or EventBridge queue so requests wait instead of immediately invoking the degraded response path. Ensure the queue redrives failed or expired messages so compliance questions are eventually retried with full knowledge base context.【F:apps/api/src/services/knowledgeBase.ts†L299-L347】
+- **Monitor degradation telemetry**: Watch the `kb_degraded` counters in the structured telemetry stream to validate that concurrency and queue settings are absorbing bursts as expected.【F:apps/api/src/index.ts†L703-L735】【F:apps/api/src/telemetry/log.ts†L44-L150】
 
 ### Step 1: Deploy Infrastructure
 
