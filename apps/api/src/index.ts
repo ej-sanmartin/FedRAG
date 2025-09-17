@@ -157,26 +157,29 @@ class Logger {
   warn(
     message: string,
     metadata?: Record<string, any>,
-    operation?: string
+    operation?: string,
+    duration?: number
   ): void {
-    this.log("WARN", message, metadata, operation);
+    this.log("WARN", message, metadata, operation, duration);
   }
 
   error(
     message: string,
     metadata?: Record<string, any>,
-    operation?: string
+    operation?: string,
+    duration?: number
   ): void {
-    this.log("ERROR", message, metadata, operation);
+    this.log("ERROR", message, metadata, operation, duration);
   }
 
   debug(
     message: string,
     metadata?: Record<string, any>,
-    operation?: string
+    operation?: string,
+    duration?: number
   ): void {
     if (this.logLevel === "DEBUG") {
-      this.log("DEBUG", message, metadata, operation);
+      this.log("DEBUG", message, metadata, operation, duration);
     }
   }
 }
