@@ -29,6 +29,8 @@ vi.mock('../../src/pii.js', () => ({
 vi.mock('../../src/bedrock.js', () => ({
   createBedrockKnowledgeBase: vi.fn().mockReturnValue({
     askKb: vi.fn(),
+    retrieveContext: vi.fn(),
+    getDefaultTopK: vi.fn().mockReturnValue(6),
   }),
   isGuardrailIntervention: vi.fn(),
 }));
@@ -119,6 +121,7 @@ describe('End-to-End Integration Tests', () => {
     mockBedrockKb = {
       askKb: vi.fn(),
       retrieveContext: vi.fn(),
+      getDefaultTopK: vi.fn().mockReturnValue(6),
     };
     (createBedrockKnowledgeBase as any).mockReturnValue(mockBedrockKb);
     (isGuardrailIntervention as any).mockReturnValue(false);
