@@ -61,6 +61,7 @@ describe('Lambda Handler Integration Tests', () => {
     mockBedrockKb = {
       askKb: vi.fn(),
       retrieveContext: vi.fn(),
+      getDefaultTopK: vi.fn().mockReturnValue(6),
     };
     (createBedrockKnowledgeBase as any).mockReturnValue(mockBedrockKb);
     (isGuardrailIntervention as any).mockReturnValue(false);
@@ -498,6 +499,57 @@ describe('Lambda Handler Integration Tests', () => {
         }
       );
       expect(mockPiiService.detect).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Throttling resilience', () => {
+    it('should return a degraded model-only response when Bedrock throttles', async () => {
+      const mockPrePiiResult = {
+        originalText: 'What is the latest privacy escalation process?',
+        maskedText: 'What is the latest privacy escalation process?',
+        entitiesFound: [],
+      };
+
+      const expectedAnswer = "I'm temporarily unable to retrieve verified knowledge base sources due to throttling. This unsourced, model-only response is provided without citations. Please verify the guidance for \"What is the latest privacy escalation process?\" using official documentation or try again shortly.";
+
+      const mockPostPiiResult = {
+        originalText: expectedAnswer,
+        maskedText: expectedAnswer,
+        entitiesFound: [],
+      };
+
+      mockPiiService.redactPII
+        .mockResolvedValueOnce(mockPrePiiResult)
+        .mockResolvedValueOnce(mockPostPiiResult);
+
+      const throttleError = {
+        name: 'ThrottlingException',
+        message: 'Rate exceeded',
+        statusCode: 429,
+        retryable: true,
+        retries: 3,
+      };
+
+      mockBedrockKb.askKb.mockRejectedValueOnce(throttleError);
+
+      const result = await handler(mockEvent, mockContext);
+
+      expect(result.statusCode).toBe(200);
+      const responseBody = JSON.parse(result.body);
+      expect(responseBody.citations).toEqual([]);
+      expect(responseBody.guardrailAction).toBe('NONE');
+      expect(responseBody.answer).toBe(expectedAnswer);
+      expect(mockBedrockKb.askKb).toHaveBeenCalledTimes(1);
+      expect(mockBedrockKb.askKb).toHaveBeenCalledWith(
+        'What is the latest privacy escalation process?',
+        'test-session-123',
+        {
+          guardrailOverride: {
+            guardrailId: 'compliance-guardrail-id',
+            guardrailVersion: '1',
+          },
+        }
+      );
     });
   });
 

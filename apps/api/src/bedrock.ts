@@ -27,6 +27,8 @@ import type {
   GuardrailConfiguration,
 } from './types.js';
 
+import { withBackoff } from './lib/backoff.js';
+
 
 interface AskKbOptions {
   guardrailOverride?: GuardrailConfiguration;
@@ -51,7 +53,7 @@ const DEFAULT_RETRIEVAL_CONFIG = {
 /**
  * Default prompt template that enforces citations and context-only responses
  */
-const DEFAULT_PROMPT_TEMPLATE = `You are a helpful assistant that answers questions based only on the provided context. 
+const DEFAULT_PROMPT_TEMPLATE = `You are a helpful assistant that answers questions based only on the provided context.
 
 IMPORTANT INSTRUCTIONS:
 1. Only use information from the provided context to answer questions
@@ -68,16 +70,67 @@ Question: $user_input$
 
 Answer:`;
 
+function parsePositiveInt(value: string | undefined, defaultValue: number): number {
+  if (!value) {
+    return defaultValue;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return defaultValue;
+  }
+
+  return parsed;
+}
+
 /**
  * Bedrock Knowledge Base client wrapper
  */
 export class BedrockKnowledgeBase {
   private client: BedrockAgentRuntimeClient;
   private config: KnowledgeBaseConfig;
+  private maxRetries: number;
+  private baseBackoffMs: number;
+  private maxBackoffMs: number;
 
   constructor(config: KnowledgeBaseConfig, region = 'us-east-1') {
     this.client = new BedrockAgentRuntimeClient({ region });
     this.config = config;
+    this.maxRetries = parsePositiveInt(process.env.KB_MAX_RETRIES, 3);
+    this.baseBackoffMs = parsePositiveInt(process.env.KB_BACKOFF_BASE_MS, 200);
+    this.maxBackoffMs = Math.max(
+      this.baseBackoffMs,
+      parsePositiveInt(process.env.KB_BACKOFF_MAX_MS, 2000)
+    );
+  }
+
+  private isRetryableThrottlingError(error: any): boolean {
+    if (!error) {
+      return false;
+    }
+
+    const statusCode = error.$metadata?.httpStatusCode ?? error.statusCode;
+
+    if (statusCode === 429) {
+      return true;
+    }
+
+    const candidate = (error.name ?? error.code ?? '').toString().toLowerCase();
+
+    if (!candidate) {
+      return Boolean(error.retryable);
+    }
+
+    if (candidate.includes('throttling') || candidate.includes('too many requests')) {
+      return true;
+    }
+
+    if (candidate.includes('toomanyrequests')) {
+      return true;
+    }
+
+    return Boolean(error.retryable);
   }
 
   /**
@@ -91,13 +144,21 @@ export class BedrockKnowledgeBase {
     query: string,
     sessionId?: string,
     options?: AskKbOptions
-  ): Promise<BedrockRetrieveAndGenerateResponse> {
+  ): Promise<BedrockRetrieveAndGenerateResponse & { retryCount: number }> {
     try {
       const input = this.buildRetrieveAndGenerateInput(query, sessionId, options);
       const command = new RetrieveAndGenerateCommand(input);
-      
+
       const startTime = Date.now();
-      const response = await this.client.send(command);
+      const { result: response, retries } = await withBackoff(
+        () => this.client.send(command),
+        {
+          maxRetries: this.maxRetries,
+          baseDelayMs: this.baseBackoffMs,
+          maxDelayMs: this.maxBackoffMs,
+          shouldRetry: (error) => this.isRetryableThrottlingError(error),
+        }
+      );
       const latency = Date.now() - startTime;
 
       // Log performance metrics
@@ -107,17 +168,34 @@ export class BedrockKnowledgeBase {
         sessionId: response.sessionId,
         guardrailAction: response.guardrailAction || 'NONE',
         citationCount: response.citations?.length || 0,
+        retryCount: retries,
       }));
 
-      return this.processBedrockResponse(response);
+      const processed = this.processBedrockResponse(response) as BedrockRetrieveAndGenerateResponse & {
+        retryCount: number;
+      };
+
+      Object.defineProperty(processed, 'retryCount', {
+        value: retries,
+        enumerable: false,
+        configurable: true,
+      });
+
+      return processed;
     } catch (error) {
       const awsError = this.handleBedrockError(error);
-      
+      if (awsError.retries === undefined) {
+        const retries = (error as any)?.retries;
+        if (typeof retries === 'number' && Number.isFinite(retries)) {
+          awsError.retries = retries;
+        }
+      }
+
       throw awsError;
     }
   }
 
-  async retrieveContext(query: string): Promise<string[]> {
+  async retrieveContext(query: string): Promise<string[] & { retryCount: number }> {
     const input: RetrieveCommandInput = {
       knowledgeBaseId: this.config.knowledgeBaseId,
       retrievalQuery: { text: query },
@@ -132,12 +210,43 @@ export class BedrockKnowledgeBase {
 
     try {
       const command = new RetrieveCommand(input);
-      const response = await this.client.send(command);
-      return this.processRetrieveResponse(response);
+      const { result: response, retries } = await withBackoff(
+        () => this.client.send(command),
+        {
+          maxRetries: this.maxRetries,
+          baseDelayMs: this.baseBackoffMs,
+          maxDelayMs: this.maxBackoffMs,
+          shouldRetry: (error) => this.isRetryableThrottlingError(error),
+        }
+      );
+      const snippets = this.processRetrieveResponse(response) as (string[] & {
+        retryCount: number;
+      });
+
+      Object.defineProperty(snippets, 'retryCount', {
+        value: retries,
+        enumerable: false,
+        configurable: true,
+      });
+
+      return snippets;
     } catch (error) {
       const awsError = this.handleBedrockError(error);
+      if (awsError.retries === undefined) {
+        const retries = (error as any)?.retries;
+        if (typeof retries === 'number' && Number.isFinite(retries)) {
+          awsError.retries = retries;
+        }
+      }
       throw awsError;
     }
+  }
+
+  getDefaultTopK(): number {
+    return (
+      this.config.retrievalConfiguration.vectorSearchConfiguration
+        .numberOfResults || DEFAULT_RETRIEVAL_CONFIG.numberOfResults
+    );
   }
 
   /**
@@ -287,7 +396,9 @@ export class BedrockKnowledgeBase {
     // Categorize errors for appropriate handling
     switch (error.name) {
       case 'ThrottlingException':
+      case 'TooManyRequestsException':
         awsError.retryable = true;
+        awsError.statusCode = 429;
         awsError.message = 'Request rate exceeded. Please retry after a delay.';
         break;
       
@@ -327,7 +438,7 @@ export class BedrockKnowledgeBase {
       
       default:
         // Handle guardrail interventions
-        if (error.message?.includes('guardrail') || 
+        if (error.message?.includes('guardrail') ||
             error.message?.includes('content policy') ||
             error.message?.includes('denied topic')) {
           awsError.name = 'GuardrailIntervention';
@@ -335,6 +446,18 @@ export class BedrockKnowledgeBase {
           awsError.message = 'Content blocked by guardrails';
         }
         break;
+    }
+
+    if (awsError.statusCode === 429) {
+      awsError.retryable = true;
+      if (!awsError.message) {
+        awsError.message = 'Request rate exceeded. Please retry after a delay.';
+      }
+    }
+
+    const retries = (error as any)?.retries;
+    if (typeof retries === 'number' && Number.isFinite(retries)) {
+      awsError.retries = retries;
     }
 
     return awsError;

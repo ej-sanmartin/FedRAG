@@ -302,6 +302,7 @@ export interface AwsServiceError {
   statusCode?: number;
   retryable?: boolean;
   details?: string;
+  retries?: number;
 }
 
 // ============================================================================
@@ -332,4 +333,10 @@ export interface PerformanceMetrics {
   totalLatency: number;
   guardrailInterventions: number;
   entitiesDetected: number;
+  knowledgeBaseRetries?: number;
+  knowledgeBaseCacheHit?: boolean;
+  knowledgeBaseDegraded?: boolean;
+  contextRetryCount?: number;
+  contextCacheHit?: boolean;
+  contextDegraded?: boolean;
 }

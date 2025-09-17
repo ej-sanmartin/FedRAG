@@ -20,6 +20,8 @@ import {
   createBedrockKnowledgeBase,
   isGuardrailIntervention,
 } from "./bedrock.js";
+import { KnowledgeBaseService } from "./services/knowledgeBase.js";
+import type { KnowledgeBaseAnswer } from "./services/knowledgeBase.js";
 import {
   chooseGuardrailId,
   type GuardrailDefinitions,
@@ -183,7 +185,7 @@ class Logger {
  */
 class RequestProcessor {
   private piiService: PiiService;
-  private bedrockKb: any;
+  private knowledgeBase: KnowledgeBaseService;
   private logger: Logger;
   private metrics: PerformanceMetrics;
   private guardrails: GuardrailDefinitions;
@@ -191,18 +193,25 @@ class RequestProcessor {
   constructor(config: LambdaConfig, correlationId: string) {
     this.piiService = new PiiService();
     this.guardrails = config.guardrails;
-    this.bedrockKb = createBedrockKnowledgeBase(
+    const bedrockClient = createBedrockKnowledgeBase(
       config.knowledgeBaseId,
       config.modelArn,
       this.guardrails.default.guardrailId,
       this.guardrails.default.guardrailVersion,
       config.region
     );
+    this.knowledgeBase = new KnowledgeBaseService(bedrockClient);
     this.logger = new Logger(correlationId, config.logLevel);
     this.metrics = {
       totalLatency: 0,
       guardrailInterventions: 0,
       entitiesDetected: 0,
+      knowledgeBaseRetries: 0,
+      knowledgeBaseCacheHit: false,
+      knowledgeBaseDegraded: false,
+      contextRetryCount: 0,
+      contextCacheHit: false,
+      contextDegraded: false,
     };
   }
 
@@ -320,22 +329,63 @@ class RequestProcessor {
         "kb_retrieve"
       );
 
-      const snippets = await this.bedrockKb.retrieveContext(maskedQuery);
+      const contextResult = await this.knowledgeBase.retrieveContext(maskedQuery, {
+        intent: "guardrail_context",
+        guardrail: this.guardrails.default,
+      });
 
       this.metrics.contextRetrievalLatency = Date.now() - startTime;
+      this.metrics.contextRetryCount = contextResult.metadata.retryCount;
+      this.metrics.contextCacheHit = contextResult.metadata.cacheHit;
+      this.metrics.contextDegraded = contextResult.metadata.degraded;
+
+      const baseMetadata = {
+        snippetCount: contextResult.snippets.length,
+        retryCount: contextResult.metadata.retryCount,
+        cacheHit: contextResult.metadata.cacheHit,
+        kb_degraded: contextResult.metadata.degraded,
+      };
+
+      if (contextResult.metadata.degraded) {
+        this.logger.warn(
+          "Knowledge base context retrieval throttled; proceeding with default guardrail",
+          {
+            ...baseMetadata,
+            errorName: contextResult.error?.name,
+            statusCode: contextResult.error?.statusCode,
+          },
+          "kb_retrieve"
+        );
+        return [];
+      }
+
+      if (contextResult.error) {
+        this.logger.warn(
+          "Context retrieval failed; proceeding with default guardrail",
+          {
+            ...baseMetadata,
+            error: contextResult.error.message,
+            errorName: contextResult.error.name,
+            statusCode: contextResult.error.statusCode,
+          },
+          "kb_retrieve"
+        );
+        return [];
+      }
 
       this.logger.info(
         "Knowledge base context retrieved",
-        {
-          snippetCount: snippets.length,
-        },
+        baseMetadata,
         "kb_retrieve",
         this.metrics.contextRetrievalLatency
       );
 
-      return snippets;
+      return contextResult.snippets;
     } catch (error) {
       this.metrics.contextRetrievalLatency = Date.now() - startTime;
+      this.metrics.contextRetryCount = 0;
+      this.metrics.contextCacheHit = false;
+      this.metrics.contextDegraded = false;
       this.logger.warn(
         "Context retrieval failed; proceeding with default guardrail",
         { error: (error as Error).message },
@@ -411,44 +461,90 @@ class RequestProcessor {
         "kb_query"
       );
 
-      const result = await this.bedrockKb.askKb(maskedQuery, sessionId, {
-        guardrailOverride: guardrailSelection.guardrail,
+      const kbResult = await this.knowledgeBase.askKnowledgeBase({
+        prompt: maskedQuery,
+        sessionId,
+        guardrail: guardrailSelection.guardrail,
+        intent: guardrailSelection.usedCompliance ? "compliance" : "default",
       });
 
       this.metrics.knowledgeBaseLatency = Date.now() - startTime;
+      this.metrics.knowledgeBaseRetries = kbResult.metadata.retryCount;
+      this.metrics.knowledgeBaseCacheHit = kbResult.metadata.cacheHit;
+      this.metrics.knowledgeBaseDegraded = kbResult.metadata.degraded;
 
-      if (result.guardrailAction === "INTERVENED") {
+      if (kbResult.metadata.degraded) {
+        this.logger.warn(
+          "Knowledge base query degraded; returning unsourced response",
+          {
+            sessionId: kbResult.sessionId,
+            guardrailId: guardrailSelection.guardrail.guardrailId,
+            guardrailVersion: guardrailSelection.guardrail.guardrailVersion,
+            usedComplianceGuardrail: guardrailSelection.usedCompliance,
+            retryCount: kbResult.metadata.retryCount,
+            cacheHit: kbResult.metadata.cacheHit,
+            kb_degraded: true,
+            errorName: kbResult.error?.name,
+            statusCode: kbResult.error?.statusCode,
+          },
+          "kb_query",
+          this.metrics.knowledgeBaseLatency
+        );
+
+        return kbResult;
+      }
+
+      if (kbResult.guardrailAction === "INTERVENED") {
         this.metrics.guardrailInterventions += 1;
         this.logger.warn(
           "Guardrail intervention occurred",
           {
-            sessionId: result.sessionId,
-            guardrailAction: result.guardrailAction,
+            sessionId: kbResult.sessionId,
+            guardrailAction: kbResult.guardrailAction,
             guardrailId: guardrailSelection.guardrail.guardrailId,
             usedComplianceGuardrail: guardrailSelection.usedCompliance,
+            retryCount: kbResult.metadata.retryCount,
+            cacheHit: kbResult.metadata.cacheHit,
+            kb_degraded: false,
           },
           "kb_query"
         );
+
+        return {
+          ...kbResult,
+          output: {
+            text: "I cannot provide a response to that query as it violates content policies.",
+          },
+          citations: [],
+          metadata: {
+            ...kbResult.metadata,
+            degraded: false,
+          },
+        };
       }
 
       this.logger.info(
         "Knowledge base query completed",
         {
-          sessionId: result.sessionId,
-          citationCount: result.citations.length,
-          guardrailAction: result.guardrailAction,
+          sessionId: kbResult.sessionId,
+          citationCount: kbResult.citations.length,
+          guardrailAction: kbResult.guardrailAction,
           guardrailId: guardrailSelection.guardrail.guardrailId,
           guardrailVersion: guardrailSelection.guardrail.guardrailVersion,
           usedComplianceGuardrail: guardrailSelection.usedCompliance,
-          responseLength: result.output.text.length,
+          responseLength: kbResult.output.text.length,
+          retryCount: kbResult.metadata.retryCount,
+          cacheHit: kbResult.metadata.cacheHit,
+          kb_degraded: false,
         },
         "kb_query",
         this.metrics.knowledgeBaseLatency
       );
 
-      return result;
+      return kbResult;
     } catch (error) {
       const awsError = error as AwsServiceError;
+      this.metrics.knowledgeBaseLatency = Date.now() - startTime;
 
       if (isGuardrailIntervention(awsError)) {
         this.metrics.guardrailInterventions += 1;
@@ -464,6 +560,10 @@ class RequestProcessor {
           },
           "kb_query"
         );
+
+        this.metrics.knowledgeBaseRetries = awsError.retries;
+        this.metrics.knowledgeBaseCacheHit = false;
+        this.metrics.knowledgeBaseDegraded = false;
 
         return {
           output: {
@@ -482,12 +582,17 @@ class RequestProcessor {
           errorName: awsError.name,
           statusCode: awsError.statusCode,
           retryable: awsError.retryable,
+          retryCount: awsError.retries,
           guardrailId: guardrailSelection.guardrail.guardrailId,
           guardrailVersion: guardrailSelection.guardrail.guardrailVersion,
           usedComplianceGuardrail: guardrailSelection.usedCompliance,
         },
         "kb_query"
       );
+
+      this.metrics.knowledgeBaseRetries = awsError.retries;
+      this.metrics.knowledgeBaseCacheHit = false;
+      this.metrics.knowledgeBaseDegraded = false;
 
       throw new Error(`Knowledge base query failed: ${awsError.message}`);
     }
@@ -541,7 +646,7 @@ class RequestProcessor {
    */
   private buildResponse(
     prePiiResult: any,
-    kbResult: any,
+    kbResult: KnowledgeBaseAnswer,
     postPiiResult: any,
     originalQuery: string
   ): ChatResponse {
