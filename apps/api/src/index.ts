@@ -807,12 +807,12 @@ class RequestProcessor {
     };
 
     for (const match of normalized.matchAll(
-      /topics?(?: detected| hit| flagged| found| triggered)?[:\s]+([a-z0-9\-\/ ,]+)/g
+      /topics?(?: detected| hit| flagged| found| triggered)?[:\s]+([-a-z0-9/ ,]+)/g
     )) {
       collect(match[1]);
     }
 
-    for (const match of normalized.matchAll(/([a-z0-9][a-z0-9\-\/ ]+?)\s+topic(?:s)?/g)) {
+    for (const match of normalized.matchAll(/([a-z0-9][-a-z0-9/ ]+?)\s+topic(?:s)?/g)) {
       collect(match[1]);
     }
 
