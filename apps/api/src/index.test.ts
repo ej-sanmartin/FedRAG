@@ -27,9 +27,14 @@ vi.mock('./bedrock.js', () => ({
   isGuardrailIntervention: vi.fn(),
 }));
 
+vi.mock('./telemetry/log.js', () => ({
+  emitRequestTelemetry: vi.fn(),
+}));
+
 // Import mocked modules
 import { PiiService } from './pii.js';
 import { createBedrockKnowledgeBase, isGuardrailIntervention } from './bedrock.js';
+import { emitRequestTelemetry } from './telemetry/log.js';
 
 describe('Lambda Handler Integration Tests', () => {
   let mockPiiService: any;
@@ -204,6 +209,16 @@ describe('Lambda Handler Integration Tests', () => {
           },
         }
       );
+
+      expect(emitRequestTelemetry).toHaveBeenCalledTimes(1);
+      expect(emitRequestTelemetry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          guardrailId: 'compliance-guardrail-id',
+          isCompliance: true,
+          blockedByGuardrail: false,
+          latencyMsTotal: expect.any(Number),
+        })
+      );
     });
 
     it('should include redacted fields when PII is detected', async () => {
@@ -310,6 +325,15 @@ describe('Lambda Handler Integration Tests', () => {
         }
       );
       expect(mockPiiService.detect).not.toHaveBeenCalled();
+
+      expect(emitRequestTelemetry).toHaveBeenCalledTimes(1);
+      expect(emitRequestTelemetry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          guardrailId: 'test-guardrail-id',
+          isCompliance: false,
+          blockedByGuardrail: true,
+        })
+      );
     });
 
     it('should keep personal information guardrail block when PII is detected', async () => {
@@ -375,6 +399,15 @@ describe('Lambda Handler Integration Tests', () => {
       );
       expect(mockPiiService.redactPII).toHaveBeenCalledTimes(2);
       expect(mockPiiService.detect).not.toHaveBeenCalled();
+
+      expect(emitRequestTelemetry).toHaveBeenCalledTimes(1);
+      expect(emitRequestTelemetry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          guardrailId: 'test-guardrail-id',
+          topicHits: expect.arrayContaining(['personal-information']),
+          blockedByGuardrail: true,
+        })
+      );
     });
 
     it('should handle Bedrock guardrail response correctly', async () => {
@@ -549,6 +582,15 @@ describe('Lambda Handler Integration Tests', () => {
             guardrailVersion: '1',
           },
         }
+      );
+
+      expect(emitRequestTelemetry).toHaveBeenCalledTimes(1);
+      expect(emitRequestTelemetry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kbDegraded: true,
+          retryCountInvoke: 3,
+          blockedByGuardrail: false,
+        })
       );
     });
   });

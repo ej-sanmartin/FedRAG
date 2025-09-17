@@ -339,4 +339,8 @@ export interface PerformanceMetrics {
   contextRetryCount?: number;
   contextCacheHit?: boolean;
   contextDegraded?: boolean;
+  blockedByGuardrail?: boolean;
+  guardrailId?: string;
+  usedComplianceGuardrail?: boolean;
+  guardrailTopics?: string[];
 }
