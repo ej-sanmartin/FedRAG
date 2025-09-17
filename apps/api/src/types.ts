@@ -327,6 +327,8 @@ export interface LogEntry {
 export interface PerformanceMetrics {
   piiDetectionLatency?: number;
   knowledgeBaseLatency?: number;
+  contextRetrievalLatency?: number;
+  guardrailSelectionLatency?: number;
   totalLatency: number;
   guardrailInterventions: number;
   entitiesDetected: number;

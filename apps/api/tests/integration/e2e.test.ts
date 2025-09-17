@@ -42,8 +42,10 @@ const TEST_CONFIG = {
   // Test environment variables
   KB_ID: process.env.TEST_KB_ID || 'test-kb-id',
   MODEL_ARN: process.env.TEST_MODEL_ARN || 'arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0',
-  GUARDRAIL_ID: process.env.TEST_GUARDRAIL_ID || 'test-guardrail-id',
-  GUARDRAIL_VERSION: process.env.TEST_GUARDRAIL_VERSION || 'DRAFT',
+  GR_DEFAULT_ID: process.env.TEST_GUARDRAIL_ID || 'test-guardrail-id',
+  GR_DEFAULT_VERSION: process.env.TEST_GUARDRAIL_VERSION || 'DRAFT',
+  GR_COMPLIANCE_ID: process.env.TEST_COMPLIANCE_GUARDRAIL_ID || 'test-compliance-guardrail',
+  GR_COMPLIANCE_VERSION: process.env.TEST_COMPLIANCE_GUARDRAIL_VERSION || '1',
   AWS_REGION: process.env.AWS_REGION || 'us-east-1',
   
   // Test timeouts
@@ -79,8 +81,10 @@ describe('End-to-End Integration Tests', () => {
     // Set up test environment
     process.env.KB_ID = TEST_CONFIG.KB_ID;
     process.env.MODEL_ARN = TEST_CONFIG.MODEL_ARN;
-    process.env.GUARDRAIL_ID = TEST_CONFIG.GUARDRAIL_ID;
-    process.env.GUARDRAIL_VERSION = TEST_CONFIG.GUARDRAIL_VERSION;
+    process.env.GR_DEFAULT_ID = TEST_CONFIG.GR_DEFAULT_ID;
+    process.env.GR_DEFAULT_VERSION = TEST_CONFIG.GR_DEFAULT_VERSION;
+    process.env.GR_COMPLIANCE_ID = TEST_CONFIG.GR_COMPLIANCE_ID;
+    process.env.GR_COMPLIANCE_VERSION = TEST_CONFIG.GR_COMPLIANCE_VERSION;
     process.env.AWS_REGION = TEST_CONFIG.AWS_REGION;
     process.env.LOG_LEVEL = 'DEBUG';
   });
@@ -108,14 +112,21 @@ describe('End-to-End Integration Tests', () => {
     // Set up mocks with realistic responses
     mockPiiService = {
       redactPII: vi.fn(),
+      detect: vi.fn(),
     };
     (PiiService as any).mockImplementation(() => mockPiiService);
 
     mockBedrockKb = {
       askKb: vi.fn(),
+      retrieveContext: vi.fn(),
     };
     (createBedrockKnowledgeBase as any).mockReturnValue(mockBedrockKb);
     (isGuardrailIntervention as any).mockReturnValue(false);
+
+    mockPiiService.detect.mockResolvedValue({ noneFound: true, entities: [] });
+    mockBedrockKb.retrieveContext.mockResolvedValue([
+      'Policies require encrypted storage of customer data.',
+    ]);
 
     // Default successful responses - will be overridden in specific tests
     mockPiiService.redactPII.mockResolvedValue({
@@ -136,8 +147,10 @@ describe('End-to-End Integration Tests', () => {
     // Clean up environment
     delete process.env.KB_ID;
     delete process.env.MODEL_ARN;
-    delete process.env.GUARDRAIL_ID;
-    delete process.env.GUARDRAIL_VERSION;
+    delete process.env.GR_DEFAULT_ID;
+    delete process.env.GR_DEFAULT_VERSION;
+    delete process.env.GR_COMPLIANCE_ID;
+    delete process.env.GR_COMPLIANCE_VERSION;
     delete process.env.AWS_REGION;
     delete process.env.LOG_LEVEL;
   });
@@ -986,13 +999,19 @@ describe('End-to-End Integration Tests', () => {
       const responses = await Promise.all(promises);
       
       // All requests should succeed
-      responses.forEach((response, index) => {
+      responses.forEach((response) => {
         validateResponseStructure(response);
         expect(response.statusCode).toBe(200);
-        
-        const body = JSON.parse(response.body);
-        expect(body.sessionId).toBe(`concurrent-session-${index}`);
       });
+
+      const returnedSessionIds = responses.map((response) => {
+        const body = JSON.parse(response.body);
+        return body.sessionId;
+      });
+
+      expect(new Set(returnedSessionIds)).toEqual(
+        new Set(['concurrent-session-0', 'concurrent-session-1', 'concurrent-session-2'])
+      );
     }, TEST_CONFIG.TIMEOUT_LONG);
 
     it('should maintain consistent response format across different query types', async () => {

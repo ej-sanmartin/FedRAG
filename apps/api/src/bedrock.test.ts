@@ -10,7 +10,9 @@ import { mockClient } from 'aws-sdk-client-mock';
 import {
   BedrockAgentRuntimeClient,
   RetrieveAndGenerateCommand,
+  RetrieveCommand,
   RetrieveAndGenerateCommandOutput,
+  RetrieveCommandOutput,
 } from '@aws-sdk/client-bedrock-agent-runtime';
 
 import {
@@ -186,18 +188,21 @@ describe('BedrockKnowledgeBase', () => {
       expect(result.output.text).toBe('');
     });
 
-    it('should allow disabling guardrails for specific requests', async () => {
+    it('should allow overriding guardrails for specific requests', async () => {
       const mockResponse: RetrieveAndGenerateCommandOutput = {
-        output: { text: 'Compliance response without guardrail' },
+        output: { text: 'Compliance response with alternate guardrail' },
         citations: [],
         guardrailAction: 'NONE',
-        sessionId: 'no-guardrail-session',
+        sessionId: 'override-guardrail-session',
       };
 
       bedrockMock.on(RetrieveAndGenerateCommand).resolves(mockResponse);
 
       const result = await knowledgeBase.askKb('Compliance query', undefined, {
-        disableGuardrail: true,
+        guardrailOverride: {
+          guardrailId: 'override-guardrail',
+          guardrailVersion: '2',
+        },
       });
 
       expect(result.guardrailAction).toBe('NONE');
@@ -206,7 +211,7 @@ describe('BedrockKnowledgeBase', () => {
       expect(
         calls[0].args[0].input.retrieveAndGenerateConfiguration.knowledgeBaseConfiguration
           .generationConfiguration.guardrailConfiguration
-      ).toBeUndefined();
+      ).toEqual({ guardrailId: 'override-guardrail', guardrailVersion: '2' });
     });
 
     it('should handle empty citations gracefully', async () => {
@@ -223,6 +228,44 @@ describe('BedrockKnowledgeBase', () => {
 
       expect(result.citations).toHaveLength(0);
       expect(result.output.text).toBe('Response without citations');
+    });
+  });
+
+  describe('retrieveContext method', () => {
+    it('should return trimmed context snippets', async () => {
+      const mockRetrieveResponse: RetrieveCommandOutput = {
+        retrievalResults: [
+          { content: { text: ' First snippet ' } },
+          { content: { text: '' } },
+          { content: { text: 'Second snippet' } },
+          { content: {} as any },
+        ],
+        guardrailAction: 'NONE',
+      } as RetrieveCommandOutput;
+
+      bedrockMock.on(RetrieveCommand).resolves(mockRetrieveResponse);
+
+      const snippets = await knowledgeBase.retrieveContext('customer policy');
+
+      expect(snippets).toEqual(['First snippet', 'Second snippet']);
+
+      const calls = bedrockMock.commandCalls(RetrieveCommand);
+      expect(calls[0].args[0].input.knowledgeBaseId).toBe('test-kb-id');
+      expect(calls[0].args[0].input.retrievalQuery?.text).toBe('customer policy');
+    });
+
+    it('should surface retrieval errors through standardized handler', async () => {
+      const retrievalError = new Error('Service unavailable');
+      retrievalError.name = 'ServiceUnavailableException';
+      (retrievalError as any).$metadata = { httpStatusCode: 503 };
+
+      bedrockMock.on(RetrieveCommand).rejects(retrievalError);
+
+      await expect(knowledgeBase.retrieveContext('outage scenario')).rejects.toMatchObject({
+        name: 'ServiceUnavailableException',
+        retryable: true,
+        statusCode: 503,
+      });
     });
   });
 

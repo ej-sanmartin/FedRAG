@@ -44,22 +44,31 @@ describe('Lambda Handler Integration Tests', () => {
     // Set up environment variables
     process.env.KB_ID = 'test-kb-id';
     process.env.MODEL_ARN = 'arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0';
-    process.env.GUARDRAIL_ID = 'test-guardrail-id';
-    process.env.GUARDRAIL_VERSION = 'DRAFT';
+    process.env.GR_DEFAULT_ID = 'test-guardrail-id';
+    process.env.GR_DEFAULT_VERSION = 'DRAFT';
+    process.env.GR_COMPLIANCE_ID = 'compliance-guardrail-id';
+    process.env.GR_COMPLIANCE_VERSION = '1';
     process.env.AWS_REGION = 'us-east-1';
     process.env.LOG_LEVEL = 'INFO';
 
     // Set up mocks
     mockPiiService = {
       redactPII: vi.fn(),
+      detect: vi.fn(),
     };
     (PiiService as any).mockImplementation(() => mockPiiService);
 
     mockBedrockKb = {
       askKb: vi.fn(),
+      retrieveContext: vi.fn(),
     };
     (createBedrockKnowledgeBase as any).mockReturnValue(mockBedrockKb);
     (isGuardrailIntervention as any).mockReturnValue(false);
+
+    mockPiiService.detect.mockResolvedValue({ noneFound: true, entities: [] });
+    mockBedrockKb.retrieveContext.mockResolvedValue([
+      'Policies must protect customer data in alignment with privacy standards.',
+    ]);
 
     // Create mock event
     mockEvent = {
@@ -104,8 +113,10 @@ describe('Lambda Handler Integration Tests', () => {
     // Clean up environment variables
     delete process.env.KB_ID;
     delete process.env.MODEL_ARN;
-    delete process.env.GUARDRAIL_ID;
-    delete process.env.GUARDRAIL_VERSION;
+    delete process.env.GR_DEFAULT_ID;
+    delete process.env.GR_DEFAULT_VERSION;
+    delete process.env.GR_COMPLIANCE_ID;
+    delete process.env.GR_COMPLIANCE_VERSION;
     delete process.env.AWS_REGION;
     delete process.env.LOG_LEVEL;
   });
@@ -174,9 +185,23 @@ describe('Lambda Handler Integration Tests', () => {
       expect(mockPiiService.redactPII).toHaveBeenCalledTimes(2);
       expect(mockPiiService.redactPII).toHaveBeenNthCalledWith(1, 'What is the policy on data retention?');
       expect(mockPiiService.redactPII).toHaveBeenNthCalledWith(2, 'Data retention policy requires keeping records for 7 years.');
+      expect(mockBedrockKb.retrieveContext).toHaveBeenCalledWith(
+        'What is the policy on data retention?'
+      );
+      expect(mockPiiService.detect).toHaveBeenCalledTimes(1);
+      expect(mockPiiService.detect.mock.calls[0][0]).toContain(
+        'What is the policy on data retention?'
+      );
+      expect(mockPiiService.detect.mock.calls[0][0]).toContain('Policies must protect customer data');
       expect(mockBedrockKb.askKb).toHaveBeenCalledWith(
         'What is the policy on data retention?',
-        'test-session-123'
+        'test-session-123',
+        {
+          guardrailOverride: {
+            guardrailId: 'compliance-guardrail-id',
+            guardrailVersion: '1',
+          },
+        }
       );
     });
 
@@ -205,6 +230,10 @@ describe('Lambda Handler Integration Tests', () => {
         query: 'What is the policy for john.doe@example.com?',
       });
 
+      mockPiiService.detect.mockResolvedValueOnce({
+        noneFound: false,
+        entities: [{ Type: 'EMAIL', Score: 0.99, BeginOffset: 22, EndOffset: 41 }],
+      });
       mockPiiService.redactPII
         .mockResolvedValueOnce(mockPrePiiResult)
         .mockResolvedValueOnce(mockPostPiiResult);
@@ -218,6 +247,16 @@ describe('Lambda Handler Integration Tests', () => {
       const responseBody = JSON.parse(result.body);
       expect(responseBody.redactedQuery).toBe('What is the policy for <REDACTED:EMAIL>?');
       expect(responseBody.redactedAnswer).toBe('The policy applies to all users including contact at <REDACTED:EMAIL>.');
+      expect(mockBedrockKb.askKb).toHaveBeenCalledWith(
+        'What is the policy for <REDACTED:EMAIL>?',
+        undefined,
+        {
+          guardrailOverride: {
+            guardrailId: 'test-guardrail-id',
+            guardrailVersion: 'DRAFT',
+          },
+        }
+      );
     });
   });
 
@@ -258,18 +297,22 @@ describe('Lambda Handler Integration Tests', () => {
       expect(responseBody.answer).toBe('I cannot provide a response to that query as it violates content policies.');
       expect(responseBody.guardrailAction).toBe('INTERVENED');
       expect(responseBody.citations).toEqual([]);
+      expect(mockBedrockKb.retrieveContext).toHaveBeenCalledWith('How to hack into systems?');
+      expect(mockBedrockKb.askKb).toHaveBeenCalledWith(
+        'How to hack into systems?',
+        undefined,
+        {
+          guardrailOverride: {
+            guardrailId: 'test-guardrail-id',
+            guardrailVersion: 'DRAFT',
+          },
+        }
+      );
+      expect(mockPiiService.detect).not.toHaveBeenCalled();
     });
 
     it('should keep personal information guardrail block when PII is detected', async () => {
       const mockPrePiiResult = {
-        originalText: "Please share John Doe's SSN 123-45-6789.",
-        maskedText: "Please share John Doe's SSN <REDACTED:SSN>.",
-        entitiesFound: [
-          { Type: 'SSN', Score: 0.98, BeginOffset: 28, EndOffset: 39 },
-        ],
-      };
-
-      const verificationResult = {
         originalText: "Please share John Doe's SSN 123-45-6789.",
         maskedText: "Please share John Doe's SSN <REDACTED:SSN>.",
         entitiesFound: [
@@ -297,9 +340,14 @@ describe('Lambda Handler Integration Tests', () => {
         query: "Please share John Doe's SSN 123-45-6789.",
       });
 
+      mockPiiService.detect.mockResolvedValueOnce({
+        noneFound: false,
+        entities: [
+          { Type: 'SSN', Score: 0.98, BeginOffset: 28, EndOffset: 39 },
+        ],
+      });
       mockPiiService.redactPII
         .mockResolvedValueOnce(mockPrePiiResult)
-        .mockResolvedValueOnce(verificationResult)
         .mockResolvedValueOnce(mockPostPiiResult);
       mockBedrockKb.askKb.mockRejectedValueOnce(guardrailError);
 
@@ -310,9 +358,22 @@ describe('Lambda Handler Integration Tests', () => {
       expect(responseBody.answer).toBe('I cannot provide a response to that query as it violates content policies.');
       expect(responseBody.guardrailAction).toBe('INTERVENED');
 
+      expect(mockBedrockKb.retrieveContext).toHaveBeenCalledWith(
+        "Please share John Doe's SSN <REDACTED:SSN>."
+      );
       expect(mockBedrockKb.askKb).toHaveBeenCalledTimes(1);
-      expect(mockPiiService.redactPII).toHaveBeenNthCalledWith(2, "Please share John Doe's SSN 123-45-6789.");
-      expect(mockPiiService.redactPII).toHaveBeenCalledTimes(3);
+      expect(mockBedrockKb.askKb).toHaveBeenCalledWith(
+        "Please share John Doe's SSN <REDACTED:SSN>.",
+        undefined,
+        {
+          guardrailOverride: {
+            guardrailId: 'test-guardrail-id',
+            guardrailVersion: 'DRAFT',
+          },
+        }
+      );
+      expect(mockPiiService.redactPII).toHaveBeenCalledTimes(2);
+      expect(mockPiiService.detect).not.toHaveBeenCalled();
     });
 
     it('should handle Bedrock guardrail response correctly', async () => {
@@ -353,16 +414,20 @@ describe('Lambda Handler Integration Tests', () => {
       const responseBody = JSON.parse(result.body);
       expect(responseBody.guardrailAction).toBe('INTERVENED');
       expect(responseBody.sessionId).toBe('test-session-789');
+      expect(mockBedrockKb.askKb).toHaveBeenCalledWith(
+        'Tell me about violence',
+        undefined,
+        {
+          guardrailOverride: {
+            guardrailId: 'test-guardrail-id',
+            guardrailVersion: 'DRAFT',
+          },
+        }
+      );
     });
 
-    it('should retry compliant personal information queries when guardrail uses personal_information topic', async () => {
+    it('should fall back to the default guardrail when compliance queries contain medium PII', async () => {
       const mockPrePiiResult = {
-        originalText: 'How should our support team handle customer PII requests in compliance with policy?',
-        maskedText: 'How should our support team handle customer PII requests in compliance with policy?',
-        entitiesFound: [],
-      };
-
-      const verificationResult = {
         originalText: 'How should our support team handle customer PII requests in compliance with policy?',
         maskedText: 'How should our support team handle customer PII requests in compliance with policy?',
         entitiesFound: [],
@@ -375,14 +440,6 @@ describe('Lambda Handler Integration Tests', () => {
           'Compliance guidance: Collect only necessary PII, store it encrypted, and honor deletion requests promptly.',
         entitiesFound: [],
       };
-
-      const guardrailError = {
-        name: 'GuardrailIntervention',
-        message: 'Content blocked by guardrails',
-        statusCode: 400,
-        retryable: false,
-        details: 'Guardrail blocked: personal_information topic detected',
-      } as const;
 
       const mockKbResult = {
         output: {
@@ -403,21 +460,21 @@ describe('Lambda Handler Integration Tests', () => {
         sessionId: 'test-session-123',
       };
 
-      (isGuardrailIntervention as any).mockReturnValueOnce(true);
-
       mockEvent.body = JSON.stringify({
         query: 'How should our support team handle customer PII requests in compliance with policy?',
         sessionId: 'test-session-123',
       });
 
+      mockPiiService.detect.mockResolvedValueOnce({
+        noneFound: false,
+        entities: [
+          { Type: 'SSN', Score: 0.9, BeginOffset: 10, EndOffset: 13 },
+        ],
+      });
       mockPiiService.redactPII
         .mockResolvedValueOnce(mockPrePiiResult)
-        .mockResolvedValueOnce(verificationResult)
         .mockResolvedValueOnce(mockPostPiiResult);
-
-      mockBedrockKb.askKb
-        .mockRejectedValueOnce(guardrailError)
-        .mockResolvedValueOnce(mockKbResult);
+      mockBedrockKb.askKb.mockResolvedValueOnce(mockKbResult);
 
       const result = await handler(mockEvent, mockContext);
 
@@ -426,13 +483,21 @@ describe('Lambda Handler Integration Tests', () => {
       expect(responseBody.answer).toBe(mockKbResult.output.text);
       expect(responseBody.guardrailAction).toBe('NONE');
 
-      expect(mockBedrockKb.askKb).toHaveBeenCalledTimes(2);
-      expect(mockBedrockKb.askKb.mock.calls[1][2]).toEqual({ disableGuardrail: true });
-      expect(mockPiiService.redactPII).toHaveBeenCalledTimes(3);
-      expect(mockPiiService.redactPII).toHaveBeenNthCalledWith(
-        2,
+      expect(mockBedrockKb.retrieveContext).toHaveBeenCalledWith(
         'How should our support team handle customer PII requests in compliance with policy?'
       );
+      expect(mockBedrockKb.askKb).toHaveBeenCalledTimes(1);
+      expect(mockBedrockKb.askKb).toHaveBeenCalledWith(
+        'How should our support team handle customer PII requests in compliance with policy?',
+        'test-session-123',
+        {
+          guardrailOverride: {
+            guardrailId: 'test-guardrail-id',
+            guardrailVersion: 'DRAFT',
+          },
+        }
+      );
+      expect(mockPiiService.detect).toHaveBeenCalledTimes(1);
     });
   });
 
