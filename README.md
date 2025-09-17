@@ -709,6 +709,14 @@ For issues and questions:
 
 ---
 
+##Continual Improvements
+1. Migrate from Open Search Service to S3 with Vector Support (save 90% on cost)
+2. Make logout graceful, fails with missing "redirect_url"
+3. Cognito, username and email are treated as same on login
+4. Overly aggressive guardrails on PII topic
+
+---
+
 **Next Steps After Setup:**
 1. ✅ Deploy infrastructure
 2. ✅ Upload corpus documents
