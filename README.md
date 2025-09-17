@@ -232,8 +232,10 @@ Before deploying, you must enable access to these Bedrock models in your AWS acc
 |----------|-------------|---------|----------|
 | `KB_ID` | Bedrock Knowledge Base ID | `XXXXXXXXXX` | ✅ |
 | `MODEL_ARN` | Claude model ARN | `arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0` | ✅ |
-| `GUARDRAIL_ID` | Bedrock Guardrail ID | `XXXXXXXXXX` | ✅ |
-| `GUARDRAIL_VERSION` | Guardrail version | `DRAFT` or `1` | ✅ |
+| `GR_DEFAULT_ID` | Primary Bedrock Guardrail ID | `XXXXXXXXXX` | ✅ |
+| `GR_DEFAULT_VERSION` | Primary guardrail version | `DRAFT` or `1` | ✅ |
+| `GR_COMPLIANCE_ID` | Compliance guardrail ID (used for compliant PII guidance) | `YYYYYYYYYY` | ✅ |
+| `GR_COMPLIANCE_VERSION` | Compliance guardrail version | `DRAFT` or `1` | ✅ |
 | `NODE_ENV` | Environment | `development` or `production` | ❌ |
 
 > ℹ️ **Note:** AWS Lambda automatically provides the `AWS_REGION` environment variable at runtime, so no manual configuration is required.

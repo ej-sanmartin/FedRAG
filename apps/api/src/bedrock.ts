@@ -9,10 +9,13 @@
 import {
   BedrockAgentRuntimeClient,
   RetrieveAndGenerateCommand,
+  RetrieveCommand,
 } from '@aws-sdk/client-bedrock-agent-runtime';
 import type {
   RetrieveAndGenerateCommandInput,
   RetrieveAndGenerateCommandOutput,
+  RetrieveCommandInput,
+  RetrieveCommandOutput,
 } from '@aws-sdk/client-bedrock-agent-runtime';
 
 import type {
@@ -21,10 +24,12 @@ import type {
   GuardrailAction,
   KnowledgeBaseConfig,
   AwsServiceError,
+  GuardrailConfiguration,
 } from './types.js';
 
+
 interface AskKbOptions {
-  disableGuardrail?: boolean;
+  guardrailOverride?: GuardrailConfiguration;
 }
 
 /**
@@ -112,6 +117,29 @@ export class BedrockKnowledgeBase {
     }
   }
 
+  async retrieveContext(query: string): Promise<string[]> {
+    const input: RetrieveCommandInput = {
+      knowledgeBaseId: this.config.knowledgeBaseId,
+      retrievalQuery: { text: query },
+      retrievalConfiguration: {
+        vectorSearchConfiguration: {
+          numberOfResults:
+            this.config.retrievalConfiguration.vectorSearchConfiguration
+              .numberOfResults || DEFAULT_RETRIEVAL_CONFIG.numberOfResults,
+        },
+      },
+    };
+
+    try {
+      const command = new RetrieveCommand(input);
+      const response = await this.client.send(command);
+      return this.processRetrieveResponse(response);
+    } catch (error) {
+      const awsError = this.handleBedrockError(error);
+      throw awsError;
+    }
+  }
+
   /**
    * Build the RetrieveAndGenerate input configuration
    */
@@ -141,9 +169,12 @@ export class BedrockKnowledgeBase {
       },
     };
 
-    if (!options?.disableGuardrail) {
-      generationConfiguration.guardrailConfiguration =
-        this.config.generationConfiguration.guardrailConfiguration;
+    const guardrailConfiguration =
+      options?.guardrailOverride ||
+      this.config.generationConfiguration.guardrailConfiguration;
+
+    if (guardrailConfiguration) {
+      generationConfiguration.guardrailConfiguration = guardrailConfiguration;
     }
 
     const input: RetrieveAndGenerateCommandInput = {
@@ -199,6 +230,14 @@ export class BedrockKnowledgeBase {
       guardrailAction,
       sessionId,
     };
+  }
+
+  private processRetrieveResponse(response: RetrieveCommandOutput): string[] {
+    const results = response.retrievalResults || [];
+
+    return results
+      .map((result) => result.content?.text?.trim())
+      .filter((text): text is string => Boolean(text));
   }
 
   /**

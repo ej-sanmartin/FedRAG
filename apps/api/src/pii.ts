@@ -12,11 +12,16 @@ import {
   type LanguageCode,
   type PiiEntity as AwsPiiEntity
 } from '@aws-sdk/client-comprehend';
-import type { 
-  PiiEntity, 
+import type {
+  PiiEntity,
   PiiMaskingResult,
-  AwsServiceError 
+  AwsServiceError
 } from './types.js';
+
+export interface PiiDetectionResult {
+  noneFound: boolean;
+  entities: PiiEntity[];
+}
 
 /**
  * Configuration for PII masking behavior
@@ -65,27 +70,43 @@ export class PiiService {
    * @throws Error when Comprehend service fails or text is invalid
    */
   async redactPII(text: string): Promise<PiiMaskingResult> {
-    if (text === null || text === undefined || typeof text !== 'string') {
-      throw new Error('Invalid input: text must be a non-empty string');
-    }
+    const validatedText = this.validateInput(text);
 
-    if (text.length === 0 || text.trim().length === 0) {
+    if (this.isTextEmpty(validatedText)) {
       return {
-        originalText: text,
-        maskedText: text,
+        originalText: validatedText,
+        maskedText: validatedText,
         entitiesFound: [],
       };
     }
 
     try {
-      const entities = await this.detectPiiEntities(text);
-      const filteredEntities = this.filterEntitiesByConfidence(entities);
-      const maskedText = this.maskEntitiesInText(text, filteredEntities);
+      const filteredEntities = await this.detectAndFilterEntities(validatedText);
+      const maskedText = this.maskEntitiesInText(validatedText, filteredEntities);
 
       return {
-        originalText: text,
+        originalText: validatedText,
         maskedText,
         entitiesFound: filteredEntities,
+      };
+    } catch (error) {
+      const awsError = this.handleComprehendError(error);
+      throw new Error(`PII detection failed: ${awsError.message}`);
+    }
+  }
+
+  async detect(text: string): Promise<PiiDetectionResult> {
+    const validatedText = this.validateInput(text);
+
+    if (this.isTextEmpty(validatedText)) {
+      return { noneFound: true, entities: [] };
+    }
+
+    try {
+      const filteredEntities = await this.detectAndFilterEntities(validatedText);
+      return {
+        noneFound: filteredEntities.length === 0,
+        entities: filteredEntities,
       };
     } catch (error) {
       const awsError = this.handleComprehendError(error);
@@ -108,7 +129,7 @@ export class PiiService {
 
     const response = await this.comprehendClient.send(command);
     const awsEntities = response.Entities || [];
-    
+
     // Convert AWS PiiEntity to our PiiEntity type
     return awsEntities.map((entity: AwsPiiEntity): PiiEntity => ({
       Type: entity.Type || 'UNKNOWN',
@@ -116,6 +137,11 @@ export class PiiService {
       BeginOffset: entity.BeginOffset || 0,
       EndOffset: entity.EndOffset || 0,
     }));
+  }
+
+  private async detectAndFilterEntities(text: string): Promise<PiiEntity[]> {
+    const entities = await this.detectPiiEntities(text);
+    return this.filterEntitiesByConfidence(entities);
   }
 
   /**
@@ -287,6 +313,18 @@ export class PiiService {
 
     return awsError;
   }
+
+  private validateInput(text: string): string {
+    if (text === null || text === undefined || typeof text !== 'string') {
+      throw new Error('Invalid input: text must be a non-empty string');
+    }
+
+    return text;
+  }
+
+  private isTextEmpty(text: string): boolean {
+    return text.length === 0 || text.trim().length === 0;
+  }
 }
 
 /**
@@ -316,6 +354,6 @@ export async function detectPII(
   config?: Partial<PiiMaskingConfig>
 ): Promise<PiiEntity[]> {
   const piiService = new PiiService(config);
-  const result = await piiService.redactPII(text);
-  return result.entitiesFound;
+  const detection = await piiService.detect(text);
+  return detection.entities;
 }

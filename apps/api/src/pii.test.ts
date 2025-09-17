@@ -290,6 +290,36 @@ describe("PiiService", () => {
     });
   });
 
+  describe("detect", () => {
+    it("should indicate when no PII entities are present", async () => {
+      comprehendMock.on(DetectPiiEntitiesCommand).resolves({
+        Entities: [],
+      });
+
+      const result = await piiService.detect("Standard operating procedures contain no personal data.");
+
+      expect(result.noneFound).toBe(true);
+      expect(result.entities).toEqual([]);
+    });
+
+    it("should return detected entities without masking", async () => {
+      comprehendMock.on(DetectPiiEntitiesCommand).resolves({
+        Entities: [
+          createAwsPiiEntity("EMAIL", 0.96, 10, 24),
+          createAwsPiiEntity("PHONE", 0.91, 40, 52),
+        ],
+      });
+
+      const result = await piiService.detect("Contact us at test@example.com or call 555-123-4567.");
+
+      expect(result.noneFound).toBe(false);
+      expect(result.entities).toEqual([
+        createPiiEntity("EMAIL", 0.96, 10, 24),
+        createPiiEntity("PHONE", 0.91, 40, 52),
+      ]);
+    });
+  });
+
   describe("Error Handling", () => {
     it("should handle Comprehend service errors", async () => {
       const error = new Error("Service unavailable");

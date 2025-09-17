@@ -20,6 +20,11 @@ import {
   createBedrockKnowledgeBase,
   isGuardrailIntervention,
 } from "./bedrock.js";
+import {
+  chooseGuardrailId,
+  type GuardrailDefinitions,
+  type GuardrailSelectionResult,
+} from "./safety/guardrailRouting.js";
 import type {
   ChatRequest,
   ChatResponse,
@@ -27,7 +32,6 @@ import type {
   LogEntry,
   PerformanceMetrics,
   AwsServiceError,
-  BedrockRetrieveAndGenerateResponse,
 } from "./types.js";
 
 /**
@@ -36,8 +40,7 @@ import type {
 interface LambdaConfig {
   knowledgeBaseId: string;
   modelArn: string;
-  guardrailId: string;
-  guardrailVersion: string;
+  guardrails: GuardrailDefinitions;
   region: string;
   logLevel: string;
   allowedOrigins: string[];
@@ -47,11 +50,33 @@ interface LambdaConfig {
  * Load configuration from environment variables
  */
 function loadConfig(): LambdaConfig {
+  const defaultGuardrailId =
+    process.env.GR_DEFAULT_ID || process.env.GUARDRAIL_ID || "";
+  const defaultGuardrailVersion =
+    process.env.GR_DEFAULT_VERSION || process.env.GUARDRAIL_VERSION || "DRAFT";
+
+  const guardrails: GuardrailDefinitions = {
+    default: {
+      guardrailId: defaultGuardrailId,
+      guardrailVersion: defaultGuardrailVersion,
+    },
+  };
+
+  const complianceGuardrailId = process.env.GR_COMPLIANCE_ID;
+  const complianceGuardrailVersion =
+    process.env.GR_COMPLIANCE_VERSION || defaultGuardrailVersion;
+
+  if (complianceGuardrailId) {
+    guardrails.compliance = {
+      guardrailId: complianceGuardrailId,
+      guardrailVersion: complianceGuardrailVersion,
+    };
+  }
+
   const config: LambdaConfig = {
     knowledgeBaseId: process.env.KB_ID || "",
     modelArn: process.env.MODEL_ARN || "",
-    guardrailId: process.env.GUARDRAIL_ID || "",
-    guardrailVersion: process.env.GUARDRAIL_VERSION || "DRAFT",
+    guardrails,
     region: process.env.AWS_REGION || "us-east-1",
     logLevel: process.env.LOG_LEVEL || "INFO",
     allowedOrigins: [
@@ -62,10 +87,19 @@ function loadConfig(): LambdaConfig {
   };
 
   // Validate required configuration
-  const requiredFields = ["knowledgeBaseId", "modelArn", "guardrailId"];
-  const missingFields = requiredFields.filter(
-    (field) => !config[field as keyof LambdaConfig]
-  );
+  const missingFields = [] as string[];
+
+  if (!config.knowledgeBaseId) {
+    missingFields.push("KB_ID");
+  }
+
+  if (!config.modelArn) {
+    missingFields.push("MODEL_ARN");
+  }
+
+  if (!config.guardrails.default.guardrailId) {
+    missingFields.push("GR_DEFAULT_ID");
+  }
 
   if (missingFields.length > 0) {
     throw new Error(
@@ -152,14 +186,16 @@ class RequestProcessor {
   private bedrockKb: any;
   private logger: Logger;
   private metrics: PerformanceMetrics;
+  private guardrails: GuardrailDefinitions;
 
   constructor(config: LambdaConfig, correlationId: string) {
     this.piiService = new PiiService();
+    this.guardrails = config.guardrails;
     this.bedrockKb = createBedrockKnowledgeBase(
       config.knowledgeBaseId,
       config.modelArn,
-      config.guardrailId,
-      config.guardrailVersion,
+      this.guardrails.default.guardrailId,
+      this.guardrails.default.guardrailVersion,
       config.region
     );
     this.logger = new Logger(correlationId, config.logLevel);
@@ -184,19 +220,28 @@ class RequestProcessor {
       // Step 1: Pre-PII detection and masking
       const prePiiResult = await this.performPrePiiMasking(request.query);
 
-      // Step 2: Query knowledge base with masked input
+      // Step 2: Retrieve knowledge base context for guardrail routing
+      const contextSnippets = await this.retrieveContext(prePiiResult.maskedText);
+
+      // Step 3: Determine guardrail configuration
+      const guardrailSelection = await this.determineGuardrail(
+        request.query,
+        contextSnippets
+      );
+
+      // Step 4: Query knowledge base with selected guardrail
       const kbResult = await this.queryKnowledgeBase(
         prePiiResult.maskedText,
         request.sessionId,
-        request.query
+        guardrailSelection
       );
 
-      // Step 3: Post-PII detection and masking of response
+      // Step 5: Post-PII detection and masking of response
       const postPiiResult = await this.performPostPiiMasking(
         kbResult.output.text
       );
 
-      // Step 4: Build final response
+      // Step 6: Build final response
       const response = this.buildResponse(
         prePiiResult,
         kbResult,
@@ -265,24 +310,110 @@ class RequestProcessor {
     }
   }
 
+  private async retrieveContext(maskedQuery: string): Promise<string[]> {
+    const startTime = Date.now();
+
+    try {
+      this.logger.debug(
+        "Retrieving knowledge base context",
+        undefined,
+        "kb_retrieve"
+      );
+
+      const snippets = await this.bedrockKb.retrieveContext(maskedQuery);
+
+      this.metrics.contextRetrievalLatency = Date.now() - startTime;
+
+      this.logger.info(
+        "Knowledge base context retrieved",
+        {
+          snippetCount: snippets.length,
+        },
+        "kb_retrieve",
+        this.metrics.contextRetrievalLatency
+      );
+
+      return snippets;
+    } catch (error) {
+      this.metrics.contextRetrievalLatency = Date.now() - startTime;
+      this.logger.warn(
+        "Context retrieval failed; proceeding with default guardrail",
+        { error: (error as Error).message },
+        "kb_retrieve"
+      );
+      return [];
+    }
+  }
+
+  private async determineGuardrail(
+    prompt: string,
+    contextSnippets: string[]
+  ): Promise<GuardrailSelectionResult> {
+    const startTime = Date.now();
+
+    try {
+      const selection = await chooseGuardrailId({
+        prompt,
+        contextTexts: contextSnippets,
+        guardrails: this.guardrails,
+        piiService: this.piiService,
+        logger: this.logger,
+      });
+
+      this.metrics.guardrailSelectionLatency = Date.now() - startTime;
+
+      this.logger.info(
+        "Guardrail selection completed",
+        {
+          guardrailId: selection.guardrail.guardrailId,
+          guardrailVersion: selection.guardrail.guardrailVersion,
+          usedComplianceGuardrail: selection.usedCompliance,
+          detectedEntities: selection.detection?.entities.length ?? 0,
+        },
+        "guardrail_selection",
+        this.metrics.guardrailSelectionLatency
+      );
+
+      return selection;
+    } catch (error) {
+      this.metrics.guardrailSelectionLatency = Date.now() - startTime;
+      this.logger.warn(
+        "Guardrail selection failed; using default guardrail",
+        { error: (error as Error).message },
+        "guardrail_selection"
+      );
+      return {
+        guardrail: this.guardrails.default,
+        usedCompliance: false,
+      };
+    }
+  }
+
   /**
    * Step 2: Query knowledge base
    */
   private async queryKnowledgeBase(
     maskedQuery: string,
     sessionId: string | undefined,
-    originalQuery: string
+    guardrailSelection: GuardrailSelectionResult
   ) {
     const startTime = Date.now();
 
     try {
       this.logger.debug(
         "Starting knowledge base query",
-        { sessionId },
+        {
+          sessionId,
+          guardrailId: guardrailSelection.guardrail.guardrailId,
+          guardrailVersion: guardrailSelection.guardrail.guardrailVersion,
+          usedComplianceGuardrail: guardrailSelection.usedCompliance,
+        },
         "kb_query"
       );
 
-      const result = await this.bedrockKb.askKb(maskedQuery, sessionId);
+      const result = await this.bedrockKb.askKb(maskedQuery, sessionId, {
+        guardrailOverride: guardrailSelection.guardrail,
+      });
 
       this.metrics.knowledgeBaseLatency = Date.now() - startTime;
 
@@ -293,6 +424,8 @@ class RequestProcessor {
           {
             sessionId: result.sessionId,
             guardrailAction: result.guardrailAction,
+            guardrailId: guardrailSelection.guardrail.guardrailId,
+            usedComplianceGuardrail: guardrailSelection.usedCompliance,
           },
           "kb_query"
         );
@@ -304,6 +437,9 @@ class RequestProcessor {
           sessionId: result.sessionId,
           citationCount: result.citations.length,
           guardrailAction: result.guardrailAction,
+          guardrailId: guardrailSelection.guardrail.guardrailId,
+          guardrailVersion: guardrailSelection.guardrail.guardrailVersion,
+          usedComplianceGuardrail: guardrailSelection.usedCompliance,
           responseLength: result.output.text.length,
         },
         "kb_query",
@@ -314,7 +450,6 @@ class RequestProcessor {
     } catch (error) {
       const awsError = error as AwsServiceError;
 
-      // Handle guardrail interventions as special case
       if (isGuardrailIntervention(awsError)) {
         this.metrics.guardrailInterventions += 1;
         this.logger.warn(
@@ -323,44 +458,13 @@ class RequestProcessor {
             errorName: awsError.name,
             errorMessage: awsError.message,
             details: awsError.details,
+            guardrailId: guardrailSelection.guardrail.guardrailId,
+            guardrailVersion: guardrailSelection.guardrail.guardrailVersion,
+            usedComplianceGuardrail: guardrailSelection.usedCompliance,
           },
           "kb_query"
         );
 
-        if (this.guardrailIndicatesPersonalInformation(awsError)) {
-          this.logger.info(
-            'Personal information guardrail triggered, verifying compliance intent',
-            {
-              sessionId,
-              guardrailDetails: awsError.details,
-            },
-            'kb_query'
-          );
-
-          const bypassResult = await this.attemptPersonalInfoComplianceBypass(
-            maskedQuery,
-            originalQuery,
-            sessionId
-          );
-
-          if (bypassResult) {
-            this.metrics.knowledgeBaseLatency = Date.now() - startTime;
-            this.logger.info(
-              'Knowledge base query completed after compliance bypass',
-              {
-                sessionId: bypassResult.sessionId,
-                citationCount: bypassResult.citations.length,
-                guardrailAction: bypassResult.guardrailAction,
-                responseLength: bypassResult.output.text.length,
-              },
-              'kb_query',
-              this.metrics.knowledgeBaseLatency
-            );
-            return bypassResult;
-          }
-        }
-
-        // Return a structured response for guardrail interventions
         return {
           output: {
             text: "I cannot provide a response to that query as it violates content policies.",
@@ -378,172 +482,14 @@ class RequestProcessor {
           errorName: awsError.name,
           statusCode: awsError.statusCode,
           retryable: awsError.retryable,
+          guardrailId: guardrailSelection.guardrail.guardrailId,
+          guardrailVersion: guardrailSelection.guardrail.guardrailVersion,
+          usedComplianceGuardrail: guardrailSelection.usedCompliance,
         },
         "kb_query"
       );
 
       throw new Error(`Knowledge base query failed: ${awsError.message}`);
-    }
-  }
-
-  private guardrailIndicatesPersonalInformation(error: AwsServiceError): boolean {
-    const combinedMessage = `${error.details || ''} ${error.message || ''}`
-      .toLowerCase();
-
-    if (!combinedMessage.trim()) {
-      return false;
-    }
-
-    const normalizeForMatching = (text: string): string =>
-      text
-        .toLowerCase()
-        .replace(/[_-]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    const messageVariants = [
-      combinedMessage,
-      normalizeForMatching(combinedMessage),
-    ].filter((message, index, array) => message && array.indexOf(message) === index);
-
-    const personalKeywords = [
-      'personal-information',
-      'personal information',
-      'personally identifiable',
-      'pii',
-      'personal data',
-      'sensitive personal',
-      'customer pii',
-      'contact information',
-      'social security',
-      'ssn',
-    ];
-
-    const normalizedKeywords = Array.from(
-      new Set(personalKeywords.map((keyword) => normalizeForMatching(keyword)))
-    );
-
-    return normalizedKeywords.some((keyword) =>
-      messageVariants.some((message) => message.includes(keyword))
-    );
-  }
-
-  private isComplianceIntent(query: string): boolean {
-    if (!query) {
-      return false;
-    }
-
-    const normalized = query.toLowerCase();
-    const complianceKeywords = [
-      'compliance',
-      'comply',
-      'policy',
-      'policies',
-      'procedure',
-      'procedures',
-      'guideline',
-      'guidelines',
-      'requirement',
-      'requirements',
-      'regulation',
-      'regulations',
-      'standard',
-      'standards',
-      'best practice',
-      'best practices',
-      'allowed',
-      'permitted',
-      'how should',
-      'process',
-      'processes',
-      'governance',
-    ];
-
-    const piiContextKeywords = [
-      'pii',
-      'personal information',
-      'personal data',
-      'personally identifiable',
-      'sensitive data',
-      'customer data',
-      'data handling',
-      'data retention',
-      'data protection',
-      'privacy',
-      'data request',
-      'data requests',
-      'social security',
-      'ssn',
-      'phi',
-    ];
-
-    const hasCompliance = complianceKeywords.some((keyword) =>
-      normalized.includes(keyword)
-    );
-    const hasDataContext = piiContextKeywords.some((keyword) =>
-      normalized.includes(keyword)
-    );
-
-    return hasCompliance && hasDataContext;
-  }
-
-  private async attemptPersonalInfoComplianceBypass(
-    maskedQuery: string,
-    originalQuery: string,
-    sessionId: string | undefined
-  ): Promise<BedrockRetrieveAndGenerateResponse | null> {
-    let verificationResult;
-    try {
-      verificationResult = await this.piiService.redactPII(originalQuery);
-    } catch (piiError) {
-      this.logger.error(
-        'Compliance bypass verification failed',
-        { error: (piiError as Error).message },
-        'kb_query'
-      );
-      return null;
-    }
-
-    if (verificationResult.entitiesFound.length > 0) {
-      this.logger.warn(
-        'Compliance bypass skipped: detected PII during verification',
-        {
-          entityTypes: verificationResult.entitiesFound.map((e) => e.Type),
-          entityCount: verificationResult.entitiesFound.length,
-        },
-        'kb_query'
-      );
-      return null;
-    }
-
-    if (!this.isComplianceIntent(originalQuery)) {
-      this.logger.warn(
-        'Compliance bypass skipped: query did not match compliance intent',
-        undefined,
-        'kb_query'
-      );
-      return null;
-    }
-
-    try {
-      this.logger.info(
-        'Retrying knowledge base query without guardrail after compliance verification',
-        { sessionId },
-        'kb_query'
-      );
-
-      const retryResult = await this.bedrockKb.askKb(maskedQuery, sessionId, {
-        disableGuardrail: true,
-      });
-
-      return retryResult;
-    } catch (retryError) {
-      this.logger.error(
-        'Knowledge base retry without guardrail failed',
-        { error: (retryError as Error).message },
-        'kb_query'
-      );
-      throw retryError;
     }
   }
 
